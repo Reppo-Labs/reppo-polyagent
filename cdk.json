@@ -1,0 +1,11 @@
+{
+  "app": "python3 infra/app.py",
+  "watch": {
+    "include": ["agent/**"],
+    "exclude": ["**/*.pyc", "**/__pycache__"]
+  },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:checkSecretUsage": true
+  }
+}
