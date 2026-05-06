@@ -1,50 +1,32 @@
 # Geopolitical Prediction Market Trading Agent
 
-An autonomous AI agent that analyzes crowdsourced geopolitical intelligence signals and executes trading strategies on Polymarket prediction markets based on sentiment divergence.
+An autonomous AI agent that transforms crowdsourced geopolitical intelligence from Reppo.ai into profitable trades on Polymarket by detecting sentiment-price divergence.
 
-## Overview
+## Core Concept
 
-This agent transforms community intelligence into trading alpha by identifying when crowd sentiment meaningfully diverges from market prices on geopolitical outcomes.
+Transform community wisdom into trading edge by identifying when crowd sentiment meaningfully differs from market prices on geopolitical outcomes.
 
-### Core Concept
-
-**Signal → Analysis → Trade**
-- **Signal**: Crowdsourced voting data on geopolitical topics with conviction weighting
-- **Analysis**: AI agent matches signals to live prediction markets, identifies price divergence  
-- **Trade**: Autonomous execution of limit orders when edge conditions are met
-
-## System Architecture
+## How It Works
 
 ```mermaid
 flowchart TD
-    A[Geopolitical Intelligence CSV] --> B[Lambda Trigger Every 4h]
-    B --> C[Signal Preprocessing]
-    C --> D[System Prompt Injection]
-    D --> E[Claude Sonnet 4 Agent]
+    A["📊 Reppo.ai Curated Dataset<br/>Community votes on geopolitical topics"] --> B["🧮 Signal Processing<br/>Weighted scores + conviction analysis"]
+    B --> C["🤖 Claude Sonnet 4 Agent<br/>Matches signals to live markets"]
     
-    E --> F{Phase 1: Risk Management}
-    F --> G[Get Open Positions]
-    G --> H[Check P&L vs Thresholds]
-    H --> I[Close Positions if TP/SL Hit]
+    C --> D["⚠️ Phase 1: Risk Management<br/>Check open positions for profit-taking"]
+    D --> E["💰 Take Profit +50%<br/>🛑 Stop Loss -30%"]
+    E --> F["🔍 Phase 2: Opportunity Discovery<br/>Find new trading edges"]
     
-    I --> J{Phase 2: New Opportunities}
-    J --> K[Check Wallet Balance]
-    K --> L[Fetch Active Markets]
-    L --> M[Match Signals to Markets]
-    M --> N[Evaluate Entry Conditions]
-    N --> O[Place Order if Edge Found]
+    F --> G["📈 Market Matching<br/>Semantic analysis of questions vs signals"]
+    G --> H["📊 Edge Detection<br/>Crowd says YES but market < 40%<br/>OR Crowd says NO but market > 60%"]
+    H --> I["💸 Execute Trade<br/>Place limit orders on Polymarket"]
     
-    G --> P[(DynamoDB Position Store)]
-    O --> P
-    I --> Q[Polymarket CLOB]
-    O --> Q
+    I --> J["📝 Position Tracking<br/>Record in database with audit trail"]
     
-    R[Privy Wallet] --> K
-    R --> Q
-    
-    style E fill:#f9f,stroke:#333,stroke-width:2px
-    style P fill:#bbf,stroke:#333,stroke-width:2px
-    style Q fill:#bfb,stroke:#333,stroke-width:2px
+    style C fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style D fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style F fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style H fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
 ```
 
 ## Data Flow: Intelligence to Trades
@@ -145,10 +127,10 @@ Action: BUY NO shares (crowd believes ceasefire more likely to fail)
 - **One new order per run** — Limits exposure accumulation
 - **Risk-first sequencing** — Always manage existing positions before seeking new ones
 
-### Wallet Security (Privy Integration)
-- **TEE key storage** — Private keys never leave secure enclave
-- **Policy enforcement** — Spend caps and protocol whitelist enforced pre-signature
-- **Polygon-native** — Direct USDC operations, no bridging required
+### Wallet Security
+- **Polygon wallet** — Direct USDC operations via private key management
+- **Risk controls** — Hard-coded spending limits and position size caps
+- **Secure key storage** — Private keys managed via AWS Secrets Manager
 
 ## Operational Model
 
@@ -173,7 +155,7 @@ All trading logic executes normally but orders are logged instead of submitted.
 
 - **AI Agent**: Claude Sonnet 4 with native tool-use capabilities
 - **Trading Venue**: Polymarket CLOB (Polygon L2)
-- **Wallet**: Privy server wallet with policy controls
+- **Wallet**: Polygon wallet with secure key management
 - **Data Store**: DynamoDB single-table design
 - **Runtime**: AWS Lambda with EventBridge scheduling
 - **Infrastructure**: AWS CDK for deployment
@@ -182,7 +164,7 @@ All trading logic executes normally but orders are logged instead of submitted.
 
 ### Prerequisites
 - AWS account with CDK configured
-- Privy developer account
+- Polygon wallet with USDC funding
 - Polymarket API access
 - Anthropic API key
 
@@ -197,7 +179,7 @@ cd infra && cdk deploy
 # Upload initial signal data
 python scripts/upload_csv.py --file data/feedback.csv
 
-# Configure environment variables (see technical-spec.md §8.3)
+# Configure environment variables with API keys and wallet details
 ```
 
 ### Testing
