@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Geo Trading Agent</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -49,6 +50,57 @@
       color: var(--text);
     }
     header h1 span { color: var(--muted); font-weight: 400; }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .wallet-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 6px 12px;
+      border: 1px solid #8247E5;
+      border-radius: 5px;
+      background: linear-gradient(135deg, #8247E5 0%, #a78bfa 100%);
+      box-shadow: 0 0 0 1px rgba(130, 71, 229, 0.2), 0 2px 8px rgba(130, 71, 229, 0.25);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wallet-link:hover {
+      color: #ffffff;
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.4), 0 2px 12px rgba(130, 71, 229, 0.5);
+      transform: translateY(-1px);
+    }
+    .github-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      text-decoration: none;
+      padding: 6px 10px;
+      border: 1px solid var(--border-hi);
+      border-radius: 5px;
+      background: var(--surface);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .github-link:hover {
+      color: #ffffff;
+      border-color: #a78bfa;
+      background: rgba(167, 139, 250, 0.08);
+      transform: translateY(-1px);
+    }
+    .github-link svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
     #last-updated {
       font-size: 12px;
       color: var(--muted);
@@ -126,8 +178,10 @@
       padding: 2px 7px;
       border-radius: 4px;
     }
-    .badge-open   { background: rgba(96,165,250,0.12); color: var(--blue); }
-    .badge-closed { background: rgba(90,90,114,0.18);  color: var(--muted); }
+    .badge-open    { background: rgba(96,165,250,0.12); color: var(--blue); }
+    .badge-pending { background: rgba(245,158,11,0.14); color: var(--amber); }
+    .badge-closed  { background: rgba(90,90,114,0.18);  color: var(--muted); }
+    .badge-unknown { background: rgba(90,90,114,0.18);  color: var(--muted); }
     .badge-yes    { background: rgba(34,197,94,0.12);  color: var(--green); }
     .badge-no     { background: rgba(239,68,68,0.12);  color: var(--red); }
     .badge-tp     { background: rgba(34,197,94,0.12);  color: var(--green); }
@@ -180,6 +234,21 @@
       white-space: nowrap;
       color: var(--text);
     }
+    .question-cell a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .question-cell a:hover {
+      color: var(--blue);
+      text-decoration: underline;
+    }
+    .tx-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .tx-link:hover { color: var(--blue); }
     .signal-cell {
       max-width: 200px;
       overflow: hidden;
@@ -249,14 +318,47 @@
       color: var(--muted);
       font-size: 13px;
     }
+
+    /* ── Load / error banner ─────────────────────────────────── */
+    #dash-error {
+      display: none;
+      margin: 12px 28px 0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--red-dim);
+      background: rgba(239, 68, 68, 0.08);
+      color: var(--red);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    #dash-error[data-visible="1"] { display: block; }
   </style>
 </head>
 <body>
 
 <header>
   <h1>Geo Trading Agent <span>/ Dashboard</span></h1>
-  <div id="last-updated"><span class="dot"></span>Loading…</div>
+  <div class="header-right">
+    <a class="wallet-link"
+       href="https://polygonscan.com/address/0x644f75f0b1a0175E09e1ef14861ceDa2DFe3252A#tokentxns"
+       target="_blank" rel="noopener"
+       title="View on-chain pUSD / outcome-token transfers for the funder wallet">
+      ↗ on-chain: 0x644f…3252A
+    </a>
+    <a class="github-link"
+       href="https://github.com/Reppo-Labs/reppo-polyagent"
+       target="_blank" rel="noopener"
+       title="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 014 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      GitHub
+    </a>
+    <div id="last-updated"><span class="dot"></span>Loading…</div>
+  </div>
 </header>
+
+<div id="dash-error" role="alert"></div>
 
 <div class="stats" id="stats-row"></div>
 
@@ -279,11 +381,12 @@
           <th>Out</th>
           <th>Status</th>
           <th class="num">Entry</th>
-          <th class="num">Book / Close</th>
+          <th class="num">Mark / Close</th>
           <th class="num">Size $</th>
           <th class="num">P&L $</th>
           <th class="num">P&L %</th>
           <th>Result</th>
+          <th>Tx</th>
         </tr>
       </thead>
       <tbody id="positions-body"></tbody>
@@ -293,26 +396,45 @@
 
 <script>
 // ── Configuration ─────────────────────────────────────────────────────────────
-// Set DATA_URL to your S3 positions.json URL after deploying the stack.
-// The CDK output "DashboardUrl" prints this value after `cdk deploy`.
-// Leave as null to use MOCK_DATA below (useful for local development).
-const DATA_URL = "https://geotrading-geosignalsbucket7e438cb7-a5dv1umlybkt.s3.us-west-2.amazonaws.com/dashboard/positions.json";
+// Always load positions.json from the same folder as this page (same origin —
+// avoids broken absolute URLs after bucket changes and works behind caching CDNs).
+const DATA_URL = new URL("positions.json", location.href).href;
 
+function showDashError(msg) {
+  const el = document.getElementById("dash-error");
+  el.textContent = msg;
+  el.dataset.visible = "1";
+}
+function hideDashError() {
+  const el = document.getElementById("dash-error");
+  el.textContent = "";
+  el.dataset.visible = "0";
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 // Active dataset — populated by init(), either from DATA_URL or MOCK_DATA
 let POSITIONS = [];
 
+// Coerce-to-number that tolerates strings (older snapshots stored numerics
+// as strings) and returns null for anything non-finite.
+function num(x) {
+  if (x === null || x === undefined || x === "") return null;
+  const v = typeof x === "number" ? x : Number(x);
+  return Number.isFinite(v) ? v : null;
+}
 function fmt$(n) {
-  const sign = n >= 0 ? "+" : "";
-  return sign + n.toFixed(2);
+  const v = num(n);
+  if (v === null) return "—";
+  return (v >= 0 ? "+" : "") + v.toFixed(2);
 }
 function fmtPct(n) {
-  const sign = n >= 0 ? "+" : "";
-  return sign + (n * 100).toFixed(1) + "%";
+  const v = num(n);
+  if (v === null) return "—";
+  return (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
 }
 function fmtPrice(n) {
-  return n != null ? n.toFixed(3) : "—";
+  const v = num(n);
+  return v !== null ? v.toFixed(3) : "—";
 }
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -322,8 +444,18 @@ function fmtDate(iso) {
 }
 function pnlClass(n) { return n > 0 ? "up" : n < 0 ? "down" : "neu"; }
 
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function scoreColor(s) {
-  const abs = Math.abs(s);
+  const v = num(s);
+  const abs = Math.abs(v ?? 0);
   return abs >= 0.9 ? "var(--green)" : abs >= 0.7 ? "var(--amber)" : "var(--muted)";
 }
 
@@ -336,24 +468,46 @@ function closeReasonBadge(r) {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
+// Prefer mid-priced unrealised P&L for display (matches how Polymarket UI
+// marks open positions). The best-bid P&L (`pnl_usd`) remains authoritative
+// for trading decisions inside the Lambda — that field is still shown in row
+// tooltips so we can see exactly what SL/TP logic sees.
+function rowPnl(p) {
+  const status = p.status;
+  if (status === "open" || status === "pending") {
+    const mid = num(p.pnl_usd_mid);
+    if (mid !== null) return mid;
+  }
+  return num(p.pnl_usd);
+}
+
+function rowMark(p) {
+  if (p.status === "closed") return num(p.close_price);
+  return num(p.mid_price) ?? num(p.current_price);
+}
+
 function buildStats(positions) {
   const all = positions;
   const open = all.filter(p => p.status === "open");
   const closed = all.filter(p => p.status === "closed");
 
-  const realizedPnl = closed.reduce((s, p) => s + (p.pnl_usd ?? 0), 0);
-  const unrealizedPnl = open.reduce((s, p) => s + (p.pnl_usd ?? 0), 0);
+  const realizedPnl   = closed.reduce((s, p) => s + (rowPnl(p) ?? 0), 0);
+  const unrealizedPnl = open.reduce(  (s, p) => s + (rowPnl(p) ?? 0), 0);
   const netPnl = realizedPnl + unrealizedPnl;
 
-  const winners = closed.filter(p => (p.pnl_usd ?? 0) > 0);
+  const winners = closed.filter(p => (rowPnl(p) ?? 0) > 0);
   const winRate = closed.length > 0 ? winners.length / closed.length : null;
 
-  const deployed = open.reduce((s, p) => s + p.entry_price * p.size_shares, 0);
+  const deployed = open.reduce(
+    (s, p) => s + (num(p.entry_price) ?? 0) * (num(p.size_shares) ?? 0),
+    0,
+  );
 
   const avgPnlPct = closed.length > 0
     ? closed.reduce((s, p) => {
-        const pct = (((p.close_price ?? p.entry_price) - p.entry_price) / p.entry_price);
-        return s + pct;
+        const entry = num(p.entry_price) ?? 0;
+        const close = num(p.close_price) ?? entry;
+        return s + (entry ? (close - entry) / entry : 0);
       }, 0) / closed.length
     : null;
 
@@ -362,13 +516,13 @@ function buildStats(positions) {
       label: "Net P&L",
       value: fmt$(netPnl),
       cls: pnlClass(netPnl),
-      sub: `${fmt$(realizedPnl)} realized · ${fmt$(unrealizedPnl)} open`,
+      sub: `${fmt$(realizedPnl)} realized · ${fmt$(unrealizedPnl)} open (mid)`,
     },
     {
       label: "Open Positions",
       value: open.length,
       cls: "neu",
-      sub: `${fmt$(unrealizedPnl)} unrealized`,
+      sub: `${fmt$(unrealizedPnl)} unrealized (mid)`,
     },
     {
       label: "Win Rate",
@@ -378,7 +532,7 @@ function buildStats(positions) {
     },
     {
       label: "Capital Deployed",
-      value: "$" + deployed.toFixed(2),
+      value: "$" + (deployed || 0).toFixed(2),
       cls: "neu",
       sub: `across ${open.length} positions`,
     },
@@ -408,65 +562,118 @@ function renderStats(positions) {
 function renderTable(positions) {
   const tbody = document.getElementById("positions-body");
   if (!positions.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="empty">No positions yet — agent hasn't placed any trades.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="empty">No positions yet — agent hasn't placed any trades.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = positions.map(p => {
-    const bookPrice = p.status === "open" ? p.current_price : p.close_price;
-    const sizeUsdc = p.entry_price * p.size_shares;
+  try {
+    tbody.innerHTML = positions.map(p => {
+      const entry    = num(p.entry_price);
+      const size     = num(p.size_shares);
+      const close    = num(p.close_price);
+      const bid      = num(p.current_price);    // best bid — what SL/TP uses
+      const mid      = num(p.mid_price);        // (bid+ask)/2 — display
+      const pnlBid   = num(p.pnl_usd);
+      const pnlMid   = num(p.pnl_usd_mid);
+      const score    = num(p.crowd_score) ?? 0;
 
-    // P&L % — realised or live
-    const pnlPct = p.status === "closed"
-      ? ((p.close_price - p.entry_price) / p.entry_price)
-      : ((p.current_price - p.entry_price) / p.entry_price);
+      // For display, prefer mid for open / pending positions; fall back to bid.
+      const isOpen     = (p.status === "open" || p.status === "pending");
+      const dispMark   = p.status === "closed" ? close : (mid ?? bid);
+      const dispPnlUsd = isOpen ? (pnlMid ?? pnlBid) : pnlBid;
+      const sizeUsdc   = (entry !== null && size !== null) ? entry * size : null;
 
-    // For open positions: visual progress toward TP (50%) / SL (30%) thresholds
-    const TP = 0.50; const SL = 0.30;
-    let progressHtml = "";
-    if (p.status === "open") {
-      if (pnlPct >= 0) {
-        const pct = Math.min(pnlPct / TP, 1);
-        progressHtml = `
+      // P&L % — realised on closed, mid-priced on open (with bid fallback).
+      let pnlPct = null;
+      if (p.status === "closed" && entry && close !== null) {
+        pnlPct = (close - entry) / entry;
+      } else if (isOpen && entry && dispMark !== null) {
+        pnlPct = (dispMark - entry) / entry;
+      }
+
+      const markTooltip = isOpen && bid !== null && mid !== null && bid !== mid
+        ? `mid ${mid.toFixed(3)} · bid ${bid.toFixed(3)}`
+        : "";
+      const pnlTooltip  = isOpen && pnlBid !== null && pnlMid !== null && pnlBid !== pnlMid
+        ? `mid ${fmt$(pnlMid)} · bid ${fmt$(pnlBid)} (SL/TP basis)`
+        : "";
+
+      // For open positions: visual progress toward TP (50%) / SL (30%) thresholds
+      const TP = 0.50; const SL = 0.30;
+      let progressHtml = "";
+      if (p.status === "open" && pnlPct !== null) {
+        if (pnlPct >= 0) {
+          const pct = Math.min(pnlPct / TP, 1);
+          progressHtml = `
           <div class="progress-wrap" title="${fmtPct(pnlPct)} toward TP (${fmtPct(TP)})">
             <div class="progress-fill" style="width:${pct*100}%;background:var(--green)"></div>
           </div>`;
-      } else {
-        const pct = Math.min(Math.abs(pnlPct) / SL, 1);
-        progressHtml = `
+        } else {
+          const pct = Math.min(Math.abs(pnlPct) / SL, 1);
+          progressHtml = `
           <div class="progress-wrap" title="${fmtPct(pnlPct)} toward SL (${fmtPct(-SL)})">
             <div class="progress-fill" style="width:${pct*100}%;background:var(--red)"></div>
           </div>`;
+        }
       }
-    }
 
-    const scoreAbs = Math.abs(p.crowd_score);
-    const scoreFillW = Math.round(scoreAbs * 100);
-    const scoreFillColor = scoreColor(p.crowd_score);
+      const scoreFillW     = Math.round(Math.abs(score) * 100);
+      const scoreFillColor = scoreColor(score);
 
-    return `
+      const slug = p.market_slug ? encodeURIComponent(String(p.market_slug)) : "";
+      const encMarketId = p.market_id ? encodeURIComponent(String(p.market_id)) : "";
+      const marketUrl = p.market_slug
+        ? `https://polymarket.com/event/${slug}`
+        : (encMarketId ? `https://polymarket.com/markets/${encMarketId}` : "https://polymarket.com/");
+
+      const rawTx = p.tx_hash ? String(p.tx_hash).replace(/[^0-9a-fx]/gi, "") : "";
+      const txHtml = rawTx
+        ? `<a class="tx-link" href="https://polygonscan.com/tx/${rawTx}" target="_blank" rel="noopener" title="${escapeHtml(rawTx)}">↗ tx</a>`
+        : "—";
+
+      const outcome = (p.outcome || "—").toString();
+      const status  = (p.status  || "—").toString();
+      const ocAttr  = /^yes|no$/i.test(outcome) ? outcome.toLowerCase() : "unknown";
+      const stAttr  = /^open|closed|pending$/i.test(status) ? status.toLowerCase() : "unknown";
+
+      const q = escapeHtml(p.question || "—");
+      const sig = escapeHtml(p.source_headline || "—");
+
+      return `
       <tr>
-        <td class="question-cell" title="${p.question}">${p.question}</td>
-        <td class="signal-cell"   title="${p.source_headline}">${p.source_headline}</td>
+        <td class="question-cell" title="${q}">
+          <a href="${marketUrl}" target="_blank" rel="noopener">${q}</a>
+        </td>
+        <td class="signal-cell" title="${sig}">${sig}</td>
         <td>
           <div class="score-bar">
             <div class="score-pip">
               <div class="score-fill" style="width:${scoreFillW}%;background:${scoreFillColor}"></div>
             </div>
-            <span style="font-family:var(--mono);font-size:11px;color:${scoreFillColor}">${p.crowd_score.toFixed(2)}</span>
+            <span style="font-family:var(--mono);font-size:11px;color:${scoreFillColor}">${score.toFixed(2)}</span>
           </div>
         </td>
-        <td><span class="badge badge-${p.outcome.toLowerCase()}">${p.outcome}</span></td>
-        <td><span class="badge badge-${p.status}">${p.status.toUpperCase()}</span></td>
-        <td class="num">${fmtPrice(p.entry_price)}</td>
-        <td class="num">${fmtPrice(bookPrice)}</td>
-        <td class="num">$${sizeUsdc.toFixed(2)}</td>
-        <td class="num pnl-row ${pnlClass(p.pnl_usd ?? 0)}">${fmt$(p.pnl_usd ?? 0)}</td>
-        <td class="num pnl-row ${pnlClass(pnlPct)}">${fmtPct(pnlPct)} ${progressHtml}</td>
+        <td><span class="badge badge-${ocAttr}">${escapeHtml(outcome)}</span></td>
+        <td><span class="badge badge-${stAttr}">${escapeHtml(status.toUpperCase())}</span></td>
+        <td class="num">${fmtPrice(entry)}</td>
+        <td class="num" title="${escapeHtml(markTooltip)}">${fmtPrice(dispMark)}</td>
+        <td class="num">${sizeUsdc !== null ? "$" + sizeUsdc.toFixed(2) : "—"}</td>
+        <td class="num pnl-row ${pnlClass(dispPnlUsd ?? 0)}" title="${escapeHtml(pnlTooltip)}">${fmt$(dispPnlUsd)}</td>
+        <td class="num pnl-row ${pnlClass(pnlPct ?? 0)}">${fmtPct(pnlPct)} ${progressHtml}</td>
         <td>${closeReasonBadge(p.close_reason)}</td>
+        <td>${txHtml}</td>
       </tr>
     `;
-  }).join("");
+    }).join("");
+    hideDashError();
+  } catch (err) {
+    console.error("renderTable:", err);
+    showDashError(
+      "The dashboard script hit an error while building the table (often fixed by a hard refresh: Ctrl+Shift+R or ⌘⇧R). " +
+      "Details were logged to the browser console (F12)."
+    );
+    tbody.innerHTML = `<tr><td colspan="12" class="empty">Could not render rows — see red banner above.</td></tr>`;
+  }
 }
 
 // ── Filter + Init ─────────────────────────────────────────────────────────────
@@ -490,21 +697,31 @@ document.getElementById("filters").addEventListener("click", e => {
 });
 
 async function init() {
+  hideDashError();
   document.getElementById("last-updated").innerHTML =
     `<span class="dot"></span>Loading…`;
 
   try {
-    POSITIONS = await fetch(DATA_URL).then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    });
+    const r = await fetch(DATA_URL, { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    POSITIONS = Array.isArray(data) ? data : [];
   } catch (err) {
     console.error("Failed to load positions:", err);
+    showDashError(
+      `Could not load positions.json from this bucket (${err.message}). ` +
+      "Check that the Lambda run completed and that your browser is not blocking the request. Try a hard refresh (⌘⇧R / Ctrl+Shift+R)."
+    );
     POSITIONS = [];
   }
 
-  renderStats(POSITIONS);
-  applyFilter();
+  try {
+    renderStats(POSITIONS);
+    applyFilter();
+  } catch (err) {
+    console.error(err);
+    showDashError("Dashboard render failed — see browser console (F12).");
+  }
 
   const ts = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   document.getElementById("last-updated").innerHTML =

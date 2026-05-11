@@ -27,8 +27,15 @@ TOOLS = [
         # "Always call this first" is an instruction, not metadata.
         # Claude follows description text as instructions.
         "description": (
-            "Get all open positions from DynamoDB enriched with live CLOB best-bid prices. "
-            "Returns P&L and pre-computed hit_take_profit / hit_stop_loss flags. "
+            "Get all open and pending positions from DynamoDB enriched with live CLOB best-bid prices. "
+            "Returns P&L, three close-trigger flags (hit_take_profit, hit_trailing_tp, hit_stop_loss — "
+            "treat ANY of them being true as a close signal), peak_pnl_pct (running high-water mark "
+            "since entry), is_stale flag that is true when the live price is unavailable (all flags "
+            "are null then — do NOT close stale positions), sl_mode ('percent' or 'ticks' — "
+            "informational only, the flag is already pre-computed for you), position_status ('open' "
+            "for filled positions, 'pending' for resting GTCs not yet filled — skip pending in "
+            "Phase 1), and theme_key (the macro cluster this position belongs to, e.g. 'iran', "
+            "'oil', 'starmer'). "
             "Always call this first."
         ),
         "input_schema": {"type": "object", "properties": {}, "required": []},
@@ -38,18 +45,21 @@ TOOLS = [
         # The limit_price guidance here is what causes Claude to set prices
         # correctly — it reads this description when constructing arguments.
         "description": (
-            "Place a SELL limit order on Polymarket CLOB and mark the DDB position closed. "
-            "Use limit_price = current_price - 0.02 for stop-loss, "
-            "current_price for take-profit."
+            "Place a SELL limit order on Polymarket CLOB V2 with builder attribution and mark the "
+            "DDB position closed. The tool tick-rounds limit_price and clamps it to the market's "
+            "valid range, sets the conditional-token allowance for the first sell on this token, "
+            "and verifies the position exists & is open before sending the order. "
+            "Use limit_price = current_price - 0.02 for stop-loss, current_price for take-profit. "
+            "Refuses to run on stale or pending positions."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "token_id":    {"type": "string",  "description": "From get_positions()"},
-                "size_shares": {"type": "number",  "description": "Full position size to sell"},
-                "limit_price": {"type": "number",  "description": "Minimum acceptable fill price"},
+                "size_shares": {"type": "number",  "description": "Position size to sell (will be clamped to held shares)"},
+                "limit_price": {"type": "number",  "description": "Minimum acceptable fill price (will be tick-rounded)"},
                 # enum enforces valid values at the API level — Claude cannot pass anything else
-                "reason":      {"type": "string",  "enum": ["take_profit", "stop_loss", "manual"]},
+                "reason":      {"type": "string",  "enum": ["take_profit", "trailing_take_profit", "stop_loss", "manual"]},
             },
             "required": ["token_id", "size_shares", "limit_price", "reason"],
         },
@@ -57,8 +67,9 @@ TOOLS = [
     {
         "name": "get_open_markets",
         "description": (
-            "Return the top 100 active Polymarket markets by volume. "
-            "Each entry includes market_id, question, yes_token, no_token, yes_price, no_price."
+            "Return the top active Polymarket markets sorted by 24h volume. "
+            "Each entry includes market_id (conditionId), question, yes_token, no_token, "
+            "yes_price, and no_price."
         ),
         "input_schema": {"type": "object", "properties": {}, "required": []},
     },
@@ -67,7 +78,7 @@ TOOLS = [
         # "Abort Phase 2 if ok_to_trade is false" tells Claude what to DO
         # with the result — without this, it might call get_open_markets anyway.
         "description": (
-            "Check the USDC balance of the trading wallet on Polygon. "
+            "Check the pUSD (Polymarket V2 collateral) balance of the trading wallet on Polygon. "
             "Returns usdc (float) and ok_to_trade (bool). "
             "Abort Phase 2 if ok_to_trade is false."
         ),
@@ -81,8 +92,16 @@ TOOLS = [
         # The hard-cap note is a reminder that Python enforces the limit
         # regardless of what Claude passes — Claude isn't the last line of defence.
         "description": (
-            "Place a BUY limit order on Polymarket and record the position in DynamoDB. "
-            "Order size is hard-capped at MAX_ORDER_USD in code regardless of size_usdc input."
+            "Place a BUY limit order on Polymarket CLOB V2 with builder attribution and record "
+            "the position in DynamoDB. The tool looks up the market's tick size, neg-risk flag, "
+            "and minimum order size, tick-rounds limit_price, and post-reconciles fills. "
+            "Order size is hard-capped at MAX_ORDER_USD regardless of size_usdc input. "
+            "REJECTS the entry — and you must move to the next-best market — when any of these "
+            "happen: (a) current_price is below MIN_ENTRY_PRICE (~$0.05) — tail-priced markets "
+            "have hostile microstructure for our SL; (b) we already hold MAX_PER_THEME positions "
+            "in the same macro theme bucket (Iran, oil, starmer, etc.); (c) the resulting share "
+            "count is below the market's minimum; (d) the limit_price is more than 5% from the "
+            "live market price."
         ),
         "input_schema": {
             "type": "object",
@@ -90,7 +109,7 @@ TOOLS = [
                 "market_id":        {"type": "string", "description": "conditionId from get_open_markets()"},
                 "outcome":          {"type": "string", "enum": ["YES", "NO"]},
                 "size_usdc":        {"type": "number", "description": "Dollar amount to spend"},
-                "limit_price":      {"type": "number", "description": "Price per share, 0.01–0.99"},
+                "limit_price":      {"type": "number", "description": "Price per share, 0.01–0.99 (will be tick-rounded)"},
                 "source_headline":  {"type": "string", "description": "The crowd signal pod_name that triggered this trade"},
                 "crowd_score":      {"type": "number", "description": "weighted_score at time of entry (audit trail)"},
             },
@@ -118,11 +137,10 @@ def execute_tool_call(name: str, args: dict):
     if not fn:
         raise ValueError(f"Unknown tool: {name!r}")
     try:
-        # args is the dict Claude constructed — e.g. {"token_id": "abc", "reason": "stop_loss"}
-        # Python unpacks it as keyword arguments into the actual function.
         return fn(**args)
-    except Exception:
-        # Log full traceback and re-raise so Lambda exits non-zero.
-        # A silent failure here would let the loop continue with bad state.
-        logger.exception("Tool %r failed | args=%s", name, args)
-        raise
+    except Exception as exc:
+        # Return the error as a structured response so Claude can recover
+        # (e.g. try a different market if limit_price check fails).
+        # Only hard-crash on unexpected non-ValueError exceptions.
+        logger.error("Tool %r failed | args=%s\n%s", name, args, exc)
+        return {"error": type(exc).__name__, "message": str(exc)}

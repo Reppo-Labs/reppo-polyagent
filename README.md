@@ -25,11 +25,11 @@ Everything below is the machinery that takes that thesis from a CSV of votes to 
 ```mermaid
 flowchart TD
     A["Reppo voters<br/>commit voting power<br/>to geopolitical pods"] --> B["feedback.csv<br/>one row per vote"]
-    B --> C["Signal preprocessing<br/>weighted score + conviction + interactions"]
+    B --> C["Signal preprocessing<br/>score · theme · conviction · interactions"]
     C --> D["Claude Sonnet 4 agent<br/>reasons over signals & live markets"]
 
     D --> E["Phase 1<br/>manage existing risk"]
-    E --> F["Take-profit +50%<br/>Stop-loss −30%"]
+    E --> F["Fixed TP +50% · trail TP<br/>SL −30% (tick SL if cheap)"]
     F --> G["Phase 2<br/>seek new edge"]
 
     G --> H["Semantic match<br/>crowd topic ↔ Polymarket question"]
@@ -72,28 +72,31 @@ The CSV is uploaded to S3 between runs; each agent invocation reads the latest s
 
 ## 2. Turning belief into a signal
 
-Raw rows are noisy. A pod with three votes from one person is not the same thing as a pod with thirty votes from twenty people, and a pod where everyone gave it 0.05 isn't the same as one where someone bet half their power on it. So we collapse votes into three numbers per topic:
+Raw rows are noisy. A pod with three votes from one person is not the same thing as a pod with thirty votes from twenty people, and a pod where everyone gave it 0.05 isn't the same as one where someone bet half their power on it. So we collapse votes into a direction, a confidence-weighted score, conviction, and a coarse **theme** bucket (Iran, oil, Taiwan, …) so Phase 2 can cap concentration on one macro narrative.
 
 ```python
-weighted_score = (up_votes − down_votes) / (up_votes + down_votes)   # −1.0 … +1.0
+direction      = (up_vp − down_vp) / total_vp                         # −1.0 … +1.0  (veREPPO-weighted)
+confidence     = 1 − exp(−interactions / HALFLIFE)                  #  0.0 … ~1.0  (default HALFLIFE=10 rows)
+weighted_score = direction * confidence                              #  damped when N is small
 max_conviction = max(individual_vote / voter_total_power)            #  0.0 … 1.0
-interactions   = count(unique_votes)                                 #  reliability
+interactions   = count(unique_voters)                                #  reliability; MIN_INTERACTIONS=3
 ```
 
-`weighted_score` is *which way* the crowd leans. `max_conviction` is *how hard* its strongest believer is leaning. `interactions` is *how many people* showed up at all — a cheap reliability filter against signals that are really just one loud voter.
+`direction` is *which way* the crowd leans on total voting power. Multiplying by `confidence` stops almost every topic from pinning at ±1.0 after one-sided votes — the agent can rank signals by evidence depth. `max_conviction` is *how hard* the strongest believer leaned; `interactions` filters one-loud-voter noise. Override `SIGNAL_HALFLIFE_INTERACTIONS` if you want tighter or looser damping.
 
 A topic that earns a place at the agent's attention looks like this:
 
 ```
 Topic: "Iran Ceasefire Collapse"
+  theme=iran
   crowd_direction = NO
-  weighted_score  = −0.85
+  weighted_score  = −0.70
   max_conviction  =  1.00
   interactions    = 12
   comment: "Ceasefire terms unsustainable given current tensions"
 ```
 
-Twelve voters, an aggregate score saying "no, this won't hold", at least one voter putting their entire budget on it, and a written rationale. That's an intelligence note, not a chat poll.
+Twelve voters, a strong lean toward "no, this won't hold", at least one voter putting their entire budget on it, and a written rationale. That's an intelligence note, not a chat poll.
 
 ---
 
@@ -104,19 +107,19 @@ Signals don't trade themselves. The Reppo crowd thinks in terms of the world ("I
 Each run, Claude is handed:
 
 1. The processed signal table (above) as plain text.
-2. A live snapshot of the top ~300 active Polymarket markets by 24h volume.
+2. A live snapshot of the top ~300 active Polymarket markets (Gamma API, sorted by 24h volume).
 3. A short list of tools — `get_positions`, `close_position`, `check_balance`, `get_open_markets`, `place_order`.
 
 It then runs a strict two-phase loop. The order matters: protect existing capital before deploying new capital.
 
 ### Phase 1 — Manage existing risk
 
-Before chasing new opportunities, the agent looks at what's already on the books. For every position in DynamoDB:
+Before chasing new opportunities, the agent looks at what's already on the books. For every **open or pending** row in DynamoDB (pending rows reconcile against the CLOB until the entry fills):
 
-- Fetch the live best-bid from Polymarket — that's what we'd actually receive selling right now.
-- Compute realised P&L against the entry price.
-- Close any position that's hit **+50% take-profit** (let winners run, but not forever) or **−30% stop-loss** (cut losers before they teach a more expensive lesson).
-- Skip positions where the order book is unreachable (`is_stale=true`) — we don't make exit decisions on data we can't see — and skip positions that haven't filled yet (`position_status="pending"`).
+- Fetch the live order book from Polymarket. **Best bid** drives take-profit, stop-loss, and trailing logic — that's what we'd receive selling now. **Mid** is surfaced for display and dashboard marks so numbers align with the Polymarket UI.
+- **Skip** when the book is missing (`is_stale=true` — all TP/SL flags are null) or the entry is still unfilled (`position_status="pending"` — nothing to sell yet).
+- **Fixed take-profit** at **+50%** vs entry (best-bid P&L). **Trailing take-profit** arms after **+30%** peak unrealised return and exits on **50% giveback** from that peak (defaults; env-tunable). Whichever fixed TP or trail fires first wins; close `reason` is passed through to the audit trail.
+- **Stop-loss** is **−30%** vs entry for normal prices; for **cheap** entries (below **$0.10** by default) the code switches to a **tick-distance** floor so a single tick doesn't wipe the position — see `LOW_PRICE_THRESHOLD` / `LOW_PRICE_SL_TICKS`.
 
 The reasoning Claude produces on every hold/close decision is logged. Over time, that log becomes the audit trail for *why* we held and *why* we cut.
 
@@ -124,10 +127,11 @@ The reasoning Claude produces on every hold/close decision is logged. Over time,
 
 Only after Phase 1 is clean does the agent go hunting:
 
-1. Confirm the wallet has at least the **$15 reserve** in pUSD. If not, abort — no new orders this run.
+1. Confirm the wallet has at least the **$15 reserve** in **pUSD** (V2 collateral), read on-chain from the proxy funder. If not, abort — no new orders this run.
 2. Pull the active market list. Match each crowd topic to a market question by semantic reasoning, not by string overlap. ("Iran Ceasefire Collapse" matches "Will the Iran-Israel ceasefire hold through June 2026?" — and Claude is the right tool for that match.)
 3. For every match that survives the quality filter, check whether the crowd's belief is *already priced in*. If it is, no edge. If it isn't, we have a candidate trade.
-4. Place at most one order per run, capped at **$10** of pUSD.
+4. **Guards before `place_order`:** no new entries when the outcome is priced below **`MIN_ENTRY_PRICE`** (default **$0.05** — tail books break our percent stop-loss); at most **`MAX_PER_THEME`** simultaneous open/pending positions per macro **theme** bucket (default **2**); tick size, neg-risk flag, and **minimum share count** must pass the CLOB — otherwise skip and try the next match. Tool failures return structured errors so the model can pivot instead of crashing the run.
+5. Place at most one order per run, capped at **$10** of pUSD.
 
 The single-order-per-run rule is intentional. It forces the agent to pick its highest-conviction bet rather than spray capital across mediocre matches.
 
@@ -136,7 +140,7 @@ The single-order-per-run rule is intentional. It forces the agent to pick its hi
 ## 4. The edge in one diagram
 
 ```
-Crowd signal:    "Iran Ceasefire Collapse"   direction = NO   score = −0.85
+Crowd signal:    "Iran Ceasefire Collapse"   direction = NO   strong negative score
                                   ↓ semantic match
 Polymarket:      "Will Iran-Israel ceasefire hold through June 2026?"
                                   ↓ price check
@@ -147,7 +151,7 @@ Edge:            Crowd says ceasefire fails (NO) with high conviction,
 Action:          BUY NO shares at ~0.28 — if the crowd is right, NO drifts up.
 ```
 
-For a trade to actually fire, the signal *and* the price gap both have to clear quality bars:
+For a trade to actually fire, the signal *and* the price gap both have to clear quality bars (defaults shown; `ENTRY_SCORE_THRESHOLD` overrides the score bar):
 
 | Filter | Threshold | Why |
 |---|---|---|
@@ -156,8 +160,10 @@ For a trade to actually fire, the signal *and* the price gap both have to clear 
 | `interactions` | ≥ 3 | Three independent humans, minimum. |
 | Crowd YES + market YES price | < 0.50 | Market disagrees enough for the trade to be worth it. |
 | Crowd NO + market YES price | > 0.50 | Same, on the other side. |
+| Outcome price | ≥ `MIN_ENTRY_PRICE` (~0.05) | Keeps percent stop-losses away from single-tick wipeouts. |
+| Theme concentration | < `MAX_PER_THEME` opens per bucket | Stops "one thesis, four tickets" clusters. |
 
-Anything that doesn't clear all five gets logged with a reason and skipped. Most signals do not lead to trades — that's the system working as designed.
+Anything that doesn't clear the full bar gets logged with a reason and skipped. Most signals do not lead to trades — that's the system working as designed.
 
 ---
 
@@ -167,16 +173,19 @@ A long-running experiment dies from concentrated losses long before it dies from
 
 | Control | Threshold | Implementation |
 |---|---|---|
-| Take-profit | +50% return | Auto-close when hit |
-| Stop-loss | −30% loss | Auto-close when hit (priced 0.02 below best bid for guaranteed exit) |
+| Take-profit (fixed) | +50% return (best bid) | Auto-close when hit |
+| Take-profit (trail) | arm +30% peak, exit on 50% giveback | Auto-close when hit (`TRAIL_*` env vars) |
+| Stop-loss | −30% (or tick floor if entry < $0.10) | Auto-close; stop priced 0.02 below best bid for exit urgency |
 | Max order size | $10 pUSD | Hard cap in code, ignores LLM input above this |
 | Wallet reserve | $15 pUSD | Phase 2 aborts if below |
-| Limit-price sanity | ±5% of last price | Rejects fat-finger limits |
+| Min entry price | ~$0.05 outcome | `place_order` rejects cheaper books |
+| Theme cap | 2 concurrent / theme | Counts open + pending via `theme_key` |
+| Limit-price sanity | ±5% of last price | Rejects fat-finger limits (checked before tick rounding) |
 | One position per market | enforced in DDB | Prevents accidental hedging against ourselves |
 | One new entry per run | enforced in prompt | Forces highest-conviction selection |
-| Tick & min-order size | per-market | Skip the market rather than place an invalid order |
+| Tick & min-order size | per-market | CLOB V2 metadata; skip or error rather than post an invalid order |
 
-The agent also runs every order through Polymarket's CLOB V2 with a builder code attached, so attribution is recorded on-chain and we can verify execution against the [Builder Leaderboard](https://builders.polymarket.com/) independently of our own logs.
+The agent runs every order through Polymarket's **CLOB V2** (`py-clob-client-v2`) with a **bytes32 builder code** on the client, so attribution is on-chain and we can verify execution against the [Builder Leaderboard](https://builders.polymarket.com/) independently of our own logs.
 
 ---
 
@@ -188,7 +197,7 @@ This is a live experiment, not a guaranteed alpha source. There are exactly thre
 2. **The agent loses money cleanly.** The community's beliefs are sincere but uncorrelated with outcomes — interesting, because it tells us *expert-feeling* commentary is not the same as *predictive* commentary, and we know to filter differently next time.
 3. **The agent breaks even or oscillates.** Some signal types work, others don't. The audit trail (signal that triggered every trade, P&L it produced) is exactly the dataset needed to figure out which.
 
-Either way, the loss ceiling per bet is 30% of $10. We can run a long time before we run out of test budget.
+Either way, a normal mid-priced position still faces about **30%** of the ~**$10** ticket on the default percent stop-loss; ultra-cheap entries use the tick-based floor instead (see `LOW_PRICE_THRESHOLD`), so the realised loss band can differ. We can run a long time before we run out of test budget.
 
 ---
 
@@ -196,19 +205,20 @@ Either way, the loss ceiling per bet is 30% of $10. We can run a long time befor
 
 | | |
 |---|---|
-| **Schedule** | Every 4 hours (AWS EventBridge) |
-| **Runtime** | ~60–90 seconds per execution |
+| **Schedule** | Every **15 minutes** by default (EventBridge in CDK — change `Duration` in `infra/stack.py` if you want slower cadence) |
+| **Lambda region** | `eu-west-1` in the bundled stack; DynamoDB client uses **`DDB_REGION`** (set to the stack region) so the function can reach a table in another region if you place it there |
+| **Cold-start budget** | ~60–120 seconds typical (Gamma fetch + Claude + CLOB round-trips); tune timeout in CDK if needed |
 | **Trading venue** | Polymarket CLOB V2 (Polygon, pUSD collateral) |
-| **Wallet** | POLY_PROXY signature type, EOA key signs on behalf of proxy funder |
-| **Builder attribution** | Single bytes32 builder code attached to every order |
+| **Wallet** | Default **`SIGNATURE_TYPE=POLY_1271`** (deposit-wallet / embedded-wallet flow). Use **`POLY_PROXY`** for older Magic-Link accounts if the CLOB rejects orders. |
+| **Builder attribution** | Single bytes32 builder code on `ClobClient` — applied to every order |
 | **AI** | Claude Sonnet 4 with tool use (5 tools, ~4–8 calls per run) |
-| **Storage** | DynamoDB single-table for positions; S3 for `feedback.csv` and dashboard snapshot |
-| **Runtime** | AWS Lambda |
-| **Infra-as-code** | AWS CDK |
+| **Storage** | DynamoDB single-table for positions; S3 for `feedback.csv` and **`dashboard/positions.json`** (enriched with live marks when uploaded) |
+| **Compute** | AWS Lambda |
+| **Infra-as-code** | AWS CDK (install `aws-cdk-lib` / `constructs` on the deploy machine — they are not in `requirements.txt`, which targets the Lambda bundle) |
 
 ### Paper-trading mode
 
-Set `DRY_RUN=true` on the Lambda. All reasoning, market matching, signal processing, and tool routing run normally; the actual `create_and_post_order` call is replaced with a structured log line. Use this for at least a week before pointing real capital at it.
+Set `DRY_RUN=true` on the Lambda. All reasoning, market matching, signal processing, and tool routing run normally; live `create_and_post_order` / sell posts are replaced with structured log lines. Use this for at least a week before pointing real capital at it.
 
 ---
 
@@ -225,14 +235,23 @@ Set `DRY_RUN=true` on the Lambda. All reasoning, market matching, signal process
 
 ```bash
 pip install -r requirements.txt
+pip install "aws-cdk-lib>=2.130" "constructs>=10"   # deploy host only — not shipped to Lambda
 
 cd infra && cdk deploy
 
-python scripts/upload_csv.py --file data-assets/feedback.csv
+# Push the crowd feedback CSV (same schema as Reppo export; extra columns are ignored).
+# Replace YOUR_BUCKET with the bucket name from `cdk deploy` output.
+python scripts/upload_csv.py data-assets/feedback.csv YOUR_BUCKET_NAME
+# Use your real Reppo export at that path (see data-assets/feedback.sample.csv for column shape).
 
 # Set on the Lambda directly (or move to Secrets Manager before scaling capital):
-#   ANTHROPIC_API_KEY, POLYGON_PRIVATE_KEY, POLYMARKET_WALLET_ADDRESS, BUILDER_CODE
+#   ANTHROPIC_API_KEY, POLYGON_PRIVATE_KEY, POLYMARKET_WALLET_ADDRESS, BUILDER_CODE,
+#   SIGNATURE_TYPE=POLY_1271  (or POLY_PROXY for older Magic-Link wallets)
 ```
+
+Keep a local `data-assets/feedback.csv` (gitignored) for uploads; `data-assets/feedback.sample.csv` is a tiny schema reference only. When you receive a dated dump, copy or symlink it to `feedback.csv` before uploading so `S3_FEEDBACK_KEY` (`geo-signals/feedback.csv`) stays stable.
+
+To exercise the agent locally against a file without re-fetching from S3, set `FEEDBACK_CSV_PATH` to an absolute path; you still need `S3_BUCKET` set because the handler writes the dashboard snapshot at the end of each run.
 
 ### Test
 

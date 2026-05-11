@@ -1,5 +1,6 @@
 import unittest
 
+from agent import signals
 from agent.signals import preprocess_signals
 
 
@@ -14,6 +15,23 @@ def _row(name, votes, vp, up=True, feedback="", status="ACTIVE"):
 
 
 class TestPreprocessSignals(unittest.TestCase):
+    """
+    These tests assert the *directional* contract of preprocess_signals
+    (sign + magnitude of weighted_score for unanimous / mixed crowds).
+
+    The runtime formula is `direction * (1 - exp(-N / HALFLIFE))`, which
+    intentionally damps low-N topics. To keep these assertions decoupled
+    from the smoothing constant, we pin the halflife to a near-zero value
+    so `confidence ≈ 1` for any N ≥ MIN_INTERACTIONS. That re-establishes
+    the un-shrunken `±1.00` / `+0.50` reference outputs.
+    """
+
+    def setUp(self):
+        self._orig_halflife = signals.SIGNAL_HALFLIFE_INTERACTIONS
+        signals.SIGNAL_HALFLIFE_INTERACTIONS = 1e-6
+
+    def tearDown(self):
+        signals.SIGNAL_HALFLIFE_INTERACTIONS = self._orig_halflife
 
     def test_weighted_score_all_up(self):
         csv = _csv(

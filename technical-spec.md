@@ -80,8 +80,8 @@ geo-trading-agent/
 │       ├── wallet.py           # check_balance(), place_order()
 │       └── ddb.py              # DynamoDB read/write helpers
 ├── infra/
-│   ├── lambda_stack.py         # CDK: Lambda + EventBridge + IAM
-│   └── data_stack.py           # CDK: S3 bucket + DDB table
+│   ├── app.py                  # CDK app entry
+│   └── stack.py                # S3 + DynamoDB + Lambda + EventBridge
 ├── scripts/
 │   └── upload_csv.py           # One-time: push CSV to S3
 ├── tests/
@@ -619,7 +619,7 @@ Before any live capital, run the agent in dry-run mode for a **minimum of 1 week
 | Multiple positions per market? | Blocked — `place_order()` rejects if any DDB record exists for `market_id`. | Probably never. Holding both sides eliminates P&L edge. |
 | Virtuals Protocol integration? | Out of scope. Would require tokenizing the agent and sharing P&L with token holders. | If the agent is productised for external users or competition entry. |
 | AgentCore migration? | Not needed now. | If agent evolves to continuous operation, multi-agent orchestration, or persistent P&L memory across runs. |
-| CDK vs SAM? | **CDK.** `infra/lambda_stack.py` + `infra/data_stack.py`. SAM template removed. | N/A — resolved. |
+| CDK vs SAM? | **CDK.** Single stack in `infra/stack.py`. SAM template removed. | N/A — resolved. |
 | Privy key export supported? | Assumed yes for POC. See §7.3–7.4. | Phase 3 Day 1 spike confirms or triggers fallback to direct Secrets Manager key. |
 
 ---

@@ -1,0 +1,61 @@
+.env
+.env.*
+!.env.example
+
+# Local AWS keys (use AWS_SHARED_CREDENTIALS_FILE=./credentials)
+/credentials
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.python-version
+
+# Lambda deployment bundle (rebuild: pip install -r requirements.txt -t _build/ && cp -r agent _build/)
+_build/
+
+# AWS CDK
+cdk.out/
+*.zip
+
+# IDE / local tooling
+.DS_Store
+.idea/
+.vscode/
+.claude/
+.cursor/
+
+# Terraform / keys
+terraform.tfvars
+*.pem
+*.key
+
+# Reppo exports — real rows include user IDs and operational detail; keep local only
+data-assets/feedback.csv
+data-assets/pods.csv
+feedback-*.csv
+
+# Local analysis snapshots
+logs/
+
+# Lambda invoke / scratch output
+response.json
+out.json
+tmp/
+
+# Ad-hoc local harnesses (not pytest)
+test_agent_balance.py

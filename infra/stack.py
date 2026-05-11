@@ -24,8 +24,8 @@ class GeoTradingStack(Stack):
 
     After deploying, set the following Lambda env vars manually via the
     AWS Console or CLI — they are intentionally absent from this file:
-      ANTHROPIC_API_KEY, POLYGON_PRIVATE_KEY, PRIVY_API_KEY,
-      PRIVY_WALLET_ID, POLYMARKET_WALLET_ADDRESS
+      ANTHROPIC_API_KEY, POLYGON_PRIVATE_KEY, POLYMARKET_WALLET_ADDRESS,
+      BUILDER_CODE
 
     Lambda encrypts env vars at rest with KMS at no extra cost, which is
     sufficient for a POC. Move to Secrets Manager before deploying
@@ -97,6 +97,7 @@ class GeoTradingStack(Stack):
                 "S3_BUCKET":           bucket.bucket_name,
                 "S3_FEEDBACK_KEY":     "geo-signals/feedback.csv",
                 "DDB_TABLE":           "geo-trading-positions",
+                "DDB_REGION":          self.region,
                 "TAKE_PROFIT_PCT":     "0.50",
                 "STOP_LOSS_PCT":       "0.30",
                 "MIN_BALANCE_RESERVE": "15.0",
@@ -109,11 +110,11 @@ class GeoTradingStack(Stack):
         bucket.grant_put(fn, "dashboard/*")
         table.grant_read_write_data(fn)
 
-        # ── EventBridge cron: every 4 hours ───────────────────────────────────
+        # ── EventBridge: fixed cadence (15m keeps dashboard marks fresher; adjust if needed)
         rule = events.Rule(
             self,
             "AgentSchedule",
-            schedule=events.Schedule.rate(Duration.hours(4)),
+            schedule=events.Schedule.rate(Duration.minutes(15)),
         )
         rule.add_target(targets.LambdaFunction(fn))
 

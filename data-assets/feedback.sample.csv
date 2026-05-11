@@ -1,0 +1,10 @@
+name,votes,voting_power,up_vote,feedback,status
+Hormuz Updates,1.0,1.0,true,Critical chokepoint narrative,ACTIVE
+Hormuz Updates,0.9,1.0,true,,ACTIVE
+Hormuz Updates,0.7,1.0,false,,ACTIVE
+Iran Ceasefire,0.5,1.0,false,Unlikely to hold,ACTIVE
+Iran Ceasefire,0.6,1.0,false,,ACTIVE
+Iran Ceasefire,0.4,1.0,true,,ACTIVE
+Oil Price Spike,0.3,1.0,true,,ACTIVE
+Oil Price Spike,0.35,1.0,true,,ACTIVE
+Oil Price Spike,0.25,1.0,false,,ACTIVE
