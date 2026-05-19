@@ -493,7 +493,7 @@ No other permissions. No `*` wildcards on resource ARNs.
 | `DDB_TABLE` | `geo-trading-positions` | DynamoDB table name. |
 | `TAKE_PROFIT_PCT` | `0.50` | Close when P&L ≥ +50% of entry price. |
 | `STOP_LOSS_PCT` | `0.30` | Close when P&L ≤ −30% of entry price. |
-| `MIN_BALANCE_RESERVE` | `15.0` | Min USDC balance to permit new orders. |
+| `MIN_BALANCE_RESERVE` | `10.0` | Min USDC balance to permit new orders. |
 | `MAX_ORDER_USD` | `10.0` | Max dollar size per order. Hard-capped in code. |
 | `DRY_RUN` | `false` | Set `true` to log trades without executing. |
 

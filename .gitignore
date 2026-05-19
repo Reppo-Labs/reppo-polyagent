@@ -59,3 +59,11 @@ tmp/
 
 # Ad-hoc local harnesses (not pytest)
 test_agent_balance.py
+
+# Lambda environment payloads — these contain plaintext production secrets
+# (ANTHROPIC_API_KEY, POLYGON_PRIVATE_KEY, BUILDER_CODE) used with
+# `aws lambda update-function-configuration --environment file://…`.
+# Never commit. Treat any file matching this pattern as compromised once it
+# exists on disk.
+.lambda-env*.json
+lambda-env*.json

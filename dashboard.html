@@ -9,29 +9,39 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0d0d12;
-      --surface:   #13131a;
-      --border:    #1e1e2c;
-      --border-hi: #2a2a3a;
-      --text:      #e2e2eb;
-      --muted:     #5a5a72;
-      --green:     #22c55e;
+      --bg:        #0b0b0e;
+      --surface:   #111114;
+      --surface-2: #16161c;
+      --border:    #1e1e25;
+      --border-hi: #2a2a33;
+      --text:      #f4f5fa;
+      --text-soft: #aaabb8;
+      --muted:     #71727f;
+      --green:     #4ade80;
       --green-dim: #166534;
-      --red:       #ef4444;
+      --green-bg:  rgba(74,222,128,0.10);
+      --red:       #fb7185;
       --red-dim:   #7f1d1d;
-      --amber:     #f59e0b;
-      --blue:      #60a5fa;
-      --purple:    #a78bfa;
-      --mono:      "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      --red-bg:    rgba(251,113,133,0.10);
+      --amber:     #fbbf24;
+      --amber-bg:  rgba(251,191,36,0.10);
+      --blue:      #818cf8;
+      --blue-bg:   rgba(129,140,248,0.10);
+      --accent:    #818cf8;
+      --mono:      ui-monospace, "SF Mono", "Fira Code", monospace;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text",
+                   "Segoe UI", system-ui, sans-serif;
+      font-size: 13.5px;
+      line-height: 1.55;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: "ss01", "cv11";
     }
 
     /* ── Header ─────────────────────────────────────────────── */
@@ -39,76 +49,84 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 16px;
       padding: 18px 28px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
+      flex-wrap: wrap;
     }
     header h1 {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 600;
-      letter-spacing: 0.02em;
+      letter-spacing: -0.005em;
       color: var(--text);
     }
     header h1 span { color: var(--muted); font-weight: 400; }
     .header-right {
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
-    .wallet-link {
+    .pill {
       font-family: var(--mono);
       font-size: 11px;
-      color: #ffffff;
+      color: var(--text-soft);
       text-decoration: none;
-      padding: 6px 12px;
-      border: 1px solid #8247E5;
-      border-radius: 5px;
-      background: linear-gradient(135deg, #8247E5 0%, #a78bfa 100%);
-      box-shadow: 0 0 0 1px rgba(130, 71, 229, 0.2), 0 2px 8px rgba(130, 71, 229, 0.25);
-      transition: all 0.15s ease;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: transparent;
+      transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      line-height: 1;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
     }
-    .wallet-link:hover {
-      color: #ffffff;
-      border-color: #a78bfa;
-      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.4), 0 2px 12px rgba(130, 71, 229, 0.5);
-      transform: translateY(-1px);
-    }
-    .github-link {
-      font-family: var(--mono);
-      font-size: 11px;
+    .pill:hover {
       color: var(--text);
-      text-decoration: none;
-      padding: 6px 10px;
-      border: 1px solid var(--border-hi);
-      border-radius: 5px;
-      background: var(--surface);
-      transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      border-color: var(--border-hi);
+      background: var(--surface-2);
     }
-    .github-link:hover {
-      color: #ffffff;
-      border-color: #a78bfa;
-      background: rgba(167, 139, 250, 0.08);
-      transform: translateY(-1px);
-    }
-    .github-link svg {
-      width: 14px;
-      height: 14px;
+    .pill svg {
+      width: 13px;
+      height: 13px;
       fill: currentColor;
+      opacity: 0.85;
+    }
+    /* on-chain: Polygon-purple text on a soft purple ghost */
+    .pill-purple {
+      color: #b39dfa;
+      border-color: rgba(130, 71, 229, 0.40);
+      background: rgba(130, 71, 229, 0.08);
+    }
+    .pill-purple:hover {
+      color: #d4c6ff;
+      border-color: rgba(130, 71, 229, 0.70);
+      background: rgba(130, 71, 229, 0.16);
+    }
+    /* github: high-contrast white on near-black */
+    .pill-white {
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .pill-white:hover {
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.55);
+      background: rgba(255, 255, 255, 0.10);
     }
     #last-updated {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       font-family: var(--mono);
+      letter-spacing: 0.01em;
     }
     .dot {
       display: inline-block;
-      width: 7px; height: 7px;
+      width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--green);
       margin-right: 6px;
@@ -116,82 +134,293 @@
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
+      50%       { opacity: 0.35; }
+    }
+
+    /* ── Intro banner ────────────────────────────────────────── */
+    .intro {
+      margin: 28px 28px 0;
+      padding: 20px 24px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .intro-eyebrow {
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .intro-eyebrow b { color: var(--accent); font-weight: 600; letter-spacing: 0.06em; }
+    .intro-lede {
+      max-width: 820px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text-soft);
+      margin-bottom: 18px;
+    }
+    .intro-lede strong { color: var(--text); font-weight: 600; }
+    .intro-pipeline {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .intro-step {
+      background: var(--surface-2);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .intro-step-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .intro-step-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(129, 140, 248, 0.12);
+      border: 1px solid rgba(129, 140, 248, 0.30);
+      padding: 1px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+    }
+    .intro-step-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .intro-step-body {
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-soft);
+    }
+    .intro-step-body code {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--text);
+    }
+    .intro-tagline {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 12.5px;
+      color: var(--muted);
+      font-style: italic;
+      max-width: 820px;
     }
 
     /* ── Stats cards ─────────────────────────────────────────── */
     .stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      padding: 24px 28px 0;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 24px 28px 0;
     }
     .card {
+      position: relative;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 18px;
+      padding: 18px 20px;
+      transition: background 0.15s ease;
+    }
+    .card:hover {
+      background: var(--surface-2);
     }
     .card-label {
       font-size: 11px;
       font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      letter-spacing: 0.04em;
       color: var(--muted);
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .card-value {
       font-family: var(--mono);
-      font-size: 22px;
-      font-weight: 600;
+      font-size: 24px;
+      font-weight: 500;
       letter-spacing: -0.02em;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
     }
     .card-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
+      font-size: 11.5px;
+      color: var(--text-soft);
+      margin-top: 8px;
       font-family: var(--mono);
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
     }
     .up   { color: var(--green); }
     .down { color: var(--red);   }
     .neu  { color: var(--text);  }
 
+
     /* ── Table section ───────────────────────────────────────── */
     .section {
-      padding: 24px 28px 48px;
+      padding: 28px 28px 48px;
     }
     .section-header {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 14px;
+      flex-wrap: wrap;
     }
     .section-title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
-      color: var(--text);
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .positions-count {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text-soft);
+      margin-left: 6px;
     }
     .badge {
       font-family: var(--mono);
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 600;
-      padding: 2px 7px;
+      padding: 3px 8px;
       border-radius: 4px;
+      letter-spacing: 0.03em;
+      display: inline-block;
+      line-height: 1.4;
     }
-    .badge-open    { background: rgba(96,165,250,0.12); color: var(--blue); }
-    .badge-pending { background: rgba(245,158,11,0.14); color: var(--amber); }
-    .badge-closed  { background: rgba(90,90,114,0.18);  color: var(--muted); }
-    .badge-unknown { background: rgba(90,90,114,0.18);  color: var(--muted); }
-    .badge-yes    { background: rgba(34,197,94,0.12);  color: var(--green); }
-    .badge-no     { background: rgba(239,68,68,0.12);  color: var(--red); }
-    .badge-tp     { background: rgba(34,197,94,0.12);  color: var(--green); }
-    .badge-sl     { background: rgba(239,68,68,0.12);  color: var(--red); }
-    .badge-exp    { background: rgba(90,90,114,0.18);  color: var(--muted); }
+    .badge-open    { background: var(--blue-bg);   color: var(--blue); }
+    .badge-pending { background: var(--amber-bg);  color: var(--amber); }
+    .badge-closed  { background: rgba(113,114,127,0.12); color: var(--text-soft); }
+    .badge-unknown { background: rgba(113,114,127,0.12); color: var(--muted); }
+    .badge-yes     { background: var(--green-bg);  color: var(--green); }
+    .badge-no      { background: var(--red-bg);    color: var(--red); }
+    .badge-tp      { background: var(--green-bg);  color: var(--green); }
+    .badge-sl      { background: var(--red-bg);    color: var(--red); }
+    .badge-trail   { background: var(--green-bg);  color: var(--green); }
+    .badge-exp     { background: rgba(113,114,127,0.12); color: var(--text-soft); }
+    .badge-res     { background: var(--blue-bg);   color: var(--blue); }
+
+    /* small inline outcome chip placed next to the question */
+    .side-chip {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.06em;
+      margin-left: 8px;
+      vertical-align: 1px;
+    }
+    .side-chip.yes { background: var(--green-bg); color: var(--green); }
+    .side-chip.no  { background: var(--red-bg);   color: var(--red); }
+
+    /* Signal cell — topic + strength label + bar */
+    .sig-topic {
+      color: var(--text-soft);
+      font-size: 12px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sig-meta {
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: var(--mono);
+    }
+    .sig-strength {
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 9.5px;
+    }
+    .sig-strength.strong { color: var(--green); }
+    .sig-strength.medium { color: var(--amber); }
+    .sig-strength.weak   { color: var(--muted); }
+    .sig-arrow.up   { color: var(--green); }
+    .sig-arrow.down { color: var(--red); }
+    .sig-bar {
+      flex: 0 0 36px;
+      height: 3px;
+      background: var(--border-hi);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .sig-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+    .sig-score {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0;
+    }
+
+    /* Trade cell — entry → mark on one line, mono */
+    .trade-cell {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .trade-cell .arrow {
+      color: var(--muted);
+      margin: 0 4px;
+    }
+
+    /* P&L cell — $ amount above, % below */
+    .pnl-cell {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.25;
+    }
+    .pnl-cell .pnl-usd { font-size: 12.5px; font-weight: 600; }
+    .pnl-cell .pnl-pct { font-size: 11px;   color: var(--text-soft); margin-top: 2px; }
+    /* When the dollar amount is non-neutral, the percent inherits the trend
+       colour for a softer secondary cue. */
+    .pnl-cell.up   .pnl-pct { color: rgba(74,222,128,0.75); }
+    .pnl-cell.down .pnl-pct { color: rgba(251,113,133,0.75); }
+
+    /* Status + result combined cell */
+    .status-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+    }
 
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
+      background: var(--surface);
+      -webkit-overflow-scrolling: touch;
     }
     table {
       width: 100%;
@@ -199,17 +428,18 @@
       white-space: nowrap;
     }
     thead tr {
-      background: var(--surface);
+      background: var(--surface-2);
       border-bottom: 1px solid var(--border);
     }
     th {
-      padding: 10px 14px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.07em;
+      padding: 11px 14px;
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--muted);
       text-align: left;
+      cursor: default;
     }
     th.num, td.num { text-align: right; }
     tbody tr {
@@ -217,15 +447,17 @@
       transition: background 0.1s;
     }
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,0.025); }
+    tbody tr:hover { background: var(--surface-2); }
     td {
-      padding: 11px 14px;
+      padding: 12px 14px;
       font-size: 13px;
       vertical-align: middle;
     }
     td.num {
       font-family: var(--mono);
-      font-size: 12px;
+      font-size: 12.5px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
     }
     .question-cell {
       max-width: 320px;
@@ -233,6 +465,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       color: var(--text);
+      font-weight: 500;
     }
     .question-cell a {
       color: inherit;
@@ -245,7 +478,7 @@
     .tx-link {
       font-family: var(--mono);
       font-size: 11px;
-      color: var(--muted);
+      color: var(--text-soft);
       text-decoration: none;
     }
     .tx-link:hover { color: var(--blue); }
@@ -254,46 +487,120 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      color: var(--muted);
+      color: var(--text-soft);
       font-size: 12px;
     }
     .score-bar {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .score-pip {
-      width: 36px;
-      height: 4px;
-      border-radius: 2px;
+      width: 44px;
+      height: 5px;
+      border-radius: 3px;
       background: var(--border-hi);
       overflow: hidden;
     }
     .score-fill {
       height: 100%;
-      border-radius: 2px;
+      border-radius: 3px;
     }
-    .pnl-row { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+    .pnl-row { font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+
+    /* ── Footer ────────────────────────────────────────────── */
+    footer {
+      padding: 32px 28px 40px;
+      border-top: 1px solid var(--border);
+      margin-top: 16px;
+      color: var(--text-soft);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    footer h3 {
+      font-size: 10.5px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    footer p { max-width: 880px; }
+    footer p + p { margin-top: 10px; }
+    footer code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      background: var(--surface-2);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text);
+    }
+    footer strong { color: var(--text); font-weight: 600; }
+    footer a { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-hi); text-underline-offset: 3px; }
+    footer a:hover { text-decoration-color: var(--text-soft); }
+
+    /* ── Mobile ──────────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      body { font-size: 13px; }
+      header { padding: 14px 16px; }
+      header h1 { font-size: 13.5px; flex: 1 1 100%; }
+      .header-right { width: 100%; }
+      .pill { font-size: 10.5px; padding: 4px 9px; }
+      #last-updated { font-size: 10.5px; }
+      .intro { margin: 16px 16px 0; padding: 16px 18px; }
+      .intro-lede { font-size: 12.5px; margin-bottom: 14px; }
+      .intro-pipeline { grid-template-columns: 1fr; }
+      .intro-step { padding: 12px 14px; }
+      .intro-step-body { font-size: 11.5px; }
+      .intro-tagline { font-size: 12px; margin-top: 14px; padding-top: 12px; }
+      .stats { margin: 12px 16px 0; grid-template-columns: 1fr; }
+      .card { padding: 14px 16px; }
+      .card-value { font-size: 21px; }
+      .card-sub { font-size: 11px; }
+      .section { padding: 20px 16px 32px; }
+      .table-wrap { border-radius: 8px; }
+      td, th { padding: 10px 11px; }
+      .question-cell { max-width: 220px; font-size: 12.5px; }
+      .signal-cell { max-width: 140px; font-size: 11.5px; }
+      td.num { font-size: 12px; }
+      footer { padding: 24px 16px 32px; font-size: 11.5px; }
+      #dash-error { margin: 12px 16px 0; }
+    }
+    @media (max-width: 440px) {
+      /* hide low-density columns on very narrow screens */
+      th:nth-child(2), td:nth-child(2),   /* Signal */
+      th:nth-child(7), td:nth-child(7)    /* Tx */
+        { display: none; }
+    }
 
     /* ── Filter tabs ─────────────────────────────────────────── */
     .filters {
-      display: flex;
-      gap: 4px;
+      display: inline-flex;
+      gap: 0;
       margin-left: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
     }
     .filter-btn {
       background: none;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      color: var(--muted);
-      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-soft);
+      font-size: 11.5px;
       font-weight: 500;
-      padding: 4px 10px;
+      padding: 4px 12px;
       cursor: pointer;
-      transition: all 0.1s;
+      transition: all 0.12s ease;
+      letter-spacing: 0.01em;
     }
-    .filter-btn:hover  { border-color: var(--border-hi); color: var(--text); }
-    .filter-btn.active { border-color: var(--blue); color: var(--blue); background: rgba(96,165,250,0.08); }
+    .filter-btn:hover  { color: var(--text); }
+    .filter-btn.active {
+      color: var(--text);
+      background: var(--surface-2);
+      box-shadow: inset 0 0 0 1px var(--border-hi);
+    }
 
     /* ── Threshold bars on open positions ───────────────────── */
     .progress-wrap {
@@ -319,6 +626,51 @@
       font-size: 13px;
     }
 
+    /* ── Table footer — "Top N" lens selector ─────────────────── */
+    .table-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 0 4px;
+      font-size: 11px;
+      color: var(--text-soft);
+      font-family: var(--mono);
+      letter-spacing: 0.01em;
+    }
+    .table-footer label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .table-footer select {
+      appearance: none;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 22px 3px 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      background-image: linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
+                        linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
+      background-position: calc(100% - 11px) 50%, calc(100% - 6px) 50%;
+      background-size: 5px 5px;
+      background-repeat: no-repeat;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .table-footer select:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+    }
+    .table-footer select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .table-footer .muted { color: var(--muted); }
+
     /* ── Load / error banner ─────────────────────────────────── */
     #dash-error {
       display: none;
@@ -339,13 +691,13 @@
 <header>
   <h1>Geo Trading Agent <span>/ Dashboard</span></h1>
   <div class="header-right">
-    <a class="wallet-link"
+    <a class="pill pill-purple"
        href="https://polygonscan.com/address/0x644f75f0b1a0175E09e1ef14861ceDa2DFe3252A#tokentxns"
        target="_blank" rel="noopener"
        title="View on-chain pUSD / outcome-token transfers for the funder wallet">
-      ↗ on-chain: 0x644f…3252A
+      0x644f…3252A ↗
     </a>
-    <a class="github-link"
+    <a class="pill pill-white"
        href="https://github.com/Reppo-Labs/reppo-polyagent"
        target="_blank" rel="noopener"
        title="View source on GitHub">
@@ -360,11 +712,62 @@
 
 <div id="dash-error" role="alert"></div>
 
+<section class="intro" aria-label="About this experiment">
+  <div class="intro-eyebrow"><b>Reppo Datanet</b> · Geopolitics</div>
+  <p class="intro-lede">
+    An autonomous Polymarket trading agent driven by a <strong>Reppo Datanet</strong> —
+    a feed of stake-weighted human conviction on geopolitical events. Curated by voters
+    with locked tokens and economic incentives, distilled into structured signals,
+    consumed directly by the agent. <strong>Human feedback, converted into tradeable
+    alpha — live, on-chain, risk-capped.</strong>
+  </p>
+
+  <div class="intro-pipeline" role="list">
+    <div class="intro-step" role="listitem">
+      <div class="intro-step-head">
+        <span class="intro-step-num">01</span>
+        <span class="intro-step-label">Human conviction</span>
+      </div>
+      <div class="intro-step-body">
+        Voters submit and curate Pods on geopolitical questions each epoch. Stake is
+        locked; rewards flow to those whose calls held up. Skin in the game keeps
+        signal honest, noise expensive.
+      </div>
+    </div>
+
+    <div class="intro-step" role="listitem">
+      <div class="intro-step-head">
+        <span class="intro-step-num">02</span>
+        <span class="intro-step-label">Datanet signal</span>
+      </div>
+      <div class="intro-step-body">
+        Stake-weighted votes are aggregated into a Reppo Datanet feed: directional,
+        scored, machine-readable. Each row is a <code>weighted_score</code> with
+        interaction count and conviction — not a tweet, a tradeable belief.
+      </div>
+    </div>
+
+    <div class="intro-step" role="listitem">
+      <div class="intro-step-head">
+        <span class="intro-step-num">03</span>
+        <span class="intro-step-label">Agent execution</span>
+      </div>
+      <div class="intro-step-body">
+        A Claude-driven agent reads the feed every 15 min, ranks open Polymarket
+        markets against it, and places risk-capped orders via the CLOB v2 builder
+        API. Every entry, mark and exit shows up in the table below.
+      </div>
+    </div>
+  </div>
+
+  <p class="intro-tagline">RLHF taught models to talk. Reppo teaches agents to act.</p>
+</section>
+
 <div class="stats" id="stats-row"></div>
 
 <div class="section">
   <div class="section-header">
-    <span class="section-title">Positions</span>
+    <span class="section-title">Positions <span id="positions-count" class="positions-count"></span></span>
     <div class="filters" id="filters">
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn" data-filter="open">Open</button>
@@ -372,27 +775,59 @@
     </div>
   </div>
   <div class="table-wrap">
-    <table>
+    <table aria-label="Agent positions table">
+
       <thead>
         <tr>
-          <th>Market Question</th>
-          <th>Signal Topic</th>
-          <th>Score</th>
-          <th>Out</th>
+          <th>Market</th>
+          <th>Signal</th>
           <th>Status</th>
-          <th class="num">Entry</th>
-          <th class="num">Mark / Close</th>
-          <th class="num">Size $</th>
-          <th class="num">P&L $</th>
-          <th class="num">P&L %</th>
-          <th>Result</th>
+          <th class="num">Entry → Mark</th>
+          <th class="num">Size</th>
+          <th class="num">P&L</th>
           <th>Tx</th>
         </tr>
       </thead>
       <tbody id="positions-body"></tbody>
     </table>
   </div>
+
+  <div class="table-footer">
+    <label>
+      <span>Showing top</span>
+      <select id="topn-select" aria-label="Number of top positions to display">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="30" selected>30</option>
+        <option value="40">40</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+      <span class="muted">of <span id="topn-total">—</span> positions, ranked by P&amp;L</span>
+    </label>
+  </div>
 </div>
+
+<footer>
+  <h3>How these numbers line up with Polymarket</h3>
+  <p>
+    <strong>P&L</strong> sums the same per-position dollar gain/loss that Polymarket
+    shows on each row of the Positions tab: <code>(mark − entry) × shares</code>, with
+    <em>mark</em> = mid price for open trades and the realised close price for closed
+    trades. Add up the +/− column on Polymarket and you get this number. It excludes
+    wallet-level effects (deposits, withdrawals, gas, builder credits) so it reflects
+    only what the agent did. Cross-check anytime on the
+    <a href="https://polymarket.com/" target="_blank" rel="noopener">Polymarket UI</a> or
+    the <a href="https://polygonscan.com/address/0x644f75f0b1a0175E09e1ef14861ceDa2DFe3252A#tokentxns" target="_blank" rel="noopener">on-chain transfer log</a>.
+  </p>
+  <p>
+    Rows with result badge <strong>SETTLE</strong> are markets Polymarket has already
+    resolved (official <code>close_price</code> of $0 or $1 per share). Those closes are
+    written into this ledger automatically each run so <strong>win rate</strong> and
+    headline <strong>P&amp;L</strong> stay aligned with Polymarket even when the CLOB
+    order book is gone and the agent could not place a final sell.
+  </p>
+</footer>
 
 <script>
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -453,17 +888,36 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-function scoreColor(s) {
-  const v = num(s);
-  const abs = Math.abs(v ?? 0);
-  return abs >= 0.9 ? "var(--green)" : abs >= 0.7 ? "var(--amber)" : "var(--muted)";
+// Translate a raw crowd_score (-1..+1) into a human-readable bucket. We
+// hide the abstract number behind a label most users can act on.
+//   |score| >= 0.85  → Strong  (green)
+//   |score| >= 0.65  → Medium  (amber)
+//   |score| <  0.65  → Weak    (grey)
+// Direction is set by sign of the score (positive = crowd YES, negative = NO).
+function signalStrength(score) {
+  const v = num(score);
+  if (v === null) return { label: "—", cls: "weak", color: "var(--muted)", dirCls: "", dirArrow: "" };
+  const abs = Math.abs(v);
+  let label, cls, color;
+  if (abs >= 0.85)      { label = "Strong"; cls = "strong"; color = "var(--green)"; }
+  else if (abs >= 0.65) { label = "Medium"; cls = "medium"; color = "var(--amber)"; }
+  else                  { label = "Weak";   cls = "weak";   color = "var(--muted)"; }
+  const dirCls   = v >= 0 ? "up" : "down";
+  const dirArrow = v >= 0 ? "↑" : "↓";
+  return { label, cls, color, dirCls, dirArrow };
 }
 
 function closeReasonBadge(r) {
   if (!r) return "";
-  const map = { take_profit: ["tp", "TP"], stop_loss: ["sl", "SL"], expired: ["exp", "EXP"] };
-  const [cls, label] = map[r] || ["exp", r];
-  return `<span class="badge badge-${cls}">${label}</span>`;
+  const map = {
+    take_profit:          ["tp",    "TP"],
+    trailing_take_profit: ["trail", "TRAIL"],
+    stop_loss:            ["sl",    "SL"],
+    expired:              ["exp",   "EXP"],
+    resolution:           ["res",   "SETTLE"],
+  };
+  const [cls, label] = map[r] || ["exp", String(r).toUpperCase()];
+  return `<span class="badge badge-${cls}">${escapeHtml(label)}</span>`;
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -487,60 +941,57 @@ function rowMark(p) {
 }
 
 function buildStats(positions) {
-  const all = positions;
-  const open = all.filter(p => p.status === "open");
-  const closed = all.filter(p => p.status === "closed");
+  const all     = positions;
+  const open    = all.filter(p => p.status === "open" || p.status === "pending");
+  const closed  = all.filter(p => p.status === "closed");
 
-  const realizedPnl   = closed.reduce((s, p) => s + (rowPnl(p) ?? 0), 0);
-  const unrealizedPnl = open.reduce(  (s, p) => s + (rowPnl(p) ?? 0), 0);
-  const netPnl = realizedPnl + unrealizedPnl;
+  // ── P&L (matches Polymarket per-position math) ──────────────────────────────
+  // For each position PM shows:  (mark × shares) − cost
+  //   - open    → mark = mid price from CLOB book (same as we use)
+  //   - closed  → mark = realised close price
+  // Headline P&L = Σ per-position P&L. Sum the dollar column on PM's Positions
+  // tab and you get the same number (modulo a few seconds of price drift).
+  const realisedPnl   = closed.reduce((s, p) => s + (num(p.pnl_usd) ?? 0), 0);
+  const unrealisedPnl = open  .reduce((s, p) => s + (rowPnl(p)     ?? 0), 0);
+  const totalPnl      = realisedPnl + unrealisedPnl;
 
-  const winners = closed.filter(p => (rowPnl(p) ?? 0) > 0);
-  const winRate = closed.length > 0 ? winners.length / closed.length : null;
-
-  const deployed = open.reduce(
-    (s, p) => s + (num(p.entry_price) ?? 0) * (num(p.size_shares) ?? 0),
-    0,
+  // ROI = total P&L ÷ total dollars the agent has staked across every trade.
+  // Uses *deployed capital* (Σ entry × shares), not wallet balance, so it
+  // isn't distorted by deposits/withdrawals.
+  const deployedAll = all.reduce(
+    (s, p) => s + (num(p.entry_price) ?? 0) * (num(p.size_shares) ?? 0), 0
   );
+  const roi = deployedAll > 0 ? totalPnl / deployedAll : null;
 
-  const avgPnlPct = closed.length > 0
-    ? closed.reduce((s, p) => {
-        const entry = num(p.entry_price) ?? 0;
-        const close = num(p.close_price) ?? entry;
-        return s + (entry ? (close - entry) / entry : 0);
-      }, 0) / closed.length
+  // Win rate = wins ÷ (wins + losses) on decisive closes (excludes $0 flat reconciliations).
+  const decisive = closed.filter(p => {
+    const v = num(p.pnl_usd) ?? 0;
+    return v > 0 || v < 0;
+  });
+  const wins   = decisive.filter(p => (num(p.pnl_usd) ?? 0) > 0);
+  const losses = decisive.filter(p => (num(p.pnl_usd) ?? 0) < 0);
+  const winRate = (wins.length + losses.length) > 0
+    ? wins.length / (wins.length + losses.length)
     : null;
 
   return [
     {
-      label: "Net P&L",
-      value: fmt$(netPnl),
-      cls: pnlClass(netPnl),
-      sub: `${fmt$(realizedPnl)} realized · ${fmt$(unrealizedPnl)} open (mid)`,
-    },
-    {
-      label: "Open Positions",
-      value: open.length,
-      cls: "neu",
-      sub: `${fmt$(unrealizedPnl)} unrealized (mid)`,
+      label: "P&L",
+      value: fmt$(totalPnl),
+      cls:   pnlClass(totalPnl),
+      sub:   `${fmt$(realisedPnl)} closed · ${fmt$(unrealisedPnl)} open`,
     },
     {
       label: "Win Rate",
       value: winRate != null ? Math.round(winRate * 100) + "%" : "—",
-      cls: winRate != null ? (winRate >= 0.5 ? "up" : "down") : "neu",
-      sub: `${winners.length} of ${closed.length} closed`,
+      cls:   winRate == null ? "neu" : (winRate >= 0.5 ? "up" : "down"),
+      sub:   `${wins.length}W · ${losses.length}L · ${closed.length - decisive.length} flat · ${open.length} open`,
     },
     {
-      label: "Capital Deployed",
-      value: "$" + (deployed || 0).toFixed(2),
-      cls: "neu",
-      sub: `across ${open.length} positions`,
-    },
-    {
-      label: "Total Trades",
-      value: all.length,
-      cls: "neu",
-      sub: avgPnlPct != null ? `avg ${fmtPct(avgPnlPct)} on closed` : "no closed trades",
+      label: "ROI",
+      value: roi != null ? (roi >= 0 ? "+" : "") + (roi * 100).toFixed(1) + "%" : "—",
+      cls:   roi == null ? "neu" : (roi > 0 ? "up" : roi < 0 ? "down" : "neu"),
+      sub:   `P&L ÷ $${deployedAll.toFixed(0)} staked across ${all.length} trades`,
     },
   ];
 }
@@ -550,11 +1001,18 @@ function renderStats(positions) {
   const el = document.getElementById("stats-row");
   el.innerHTML = stats.map(s => `
     <div class="card">
-      <div class="card-label">${s.label}</div>
-      <div class="card-value ${s.cls}">${s.value}</div>
-      <div class="card-sub">${s.sub}</div>
+      <div class="card-label">${escapeHtml(s.label)}</div>
+      <div class="card-value ${s.cls}">${escapeHtml(String(s.value))}</div>
+      <div class="card-sub">${escapeHtml(s.sub)}</div>
     </div>
   `).join("");
+
+  const countEl = document.getElementById("positions-count");
+  if (countEl) {
+    const open   = positions.filter(p => p.status === "open" || p.status === "pending").length;
+    const closed = positions.filter(p => p.status === "closed").length;
+    countEl.textContent = `· ${open} open · ${closed} closed`;
+  }
 }
 
 // ── Table ─────────────────────────────────────────────────────────────────────
@@ -562,7 +1020,7 @@ function renderStats(positions) {
 function renderTable(positions) {
   const tbody = document.getElementById("positions-body");
   if (!positions.length) {
-    tbody.innerHTML = `<tr><td colspan="12" class="empty">No positions yet — agent hasn't placed any trades.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">No positions yet — agent hasn't placed any trades.</td></tr>`;
     return;
   }
 
@@ -598,37 +1056,30 @@ function renderTable(positions) {
         ? `mid ${fmt$(pnlMid)} · bid ${fmt$(pnlBid)} (SL/TP basis)`
         : "";
 
-      // For open positions: visual progress toward TP (50%) / SL (30%) thresholds
-      const TP = 0.50; const SL = 0.30;
-      let progressHtml = "";
-      if (p.status === "open" && pnlPct !== null) {
-        if (pnlPct >= 0) {
-          const pct = Math.min(pnlPct / TP, 1);
-          progressHtml = `
-          <div class="progress-wrap" title="${fmtPct(pnlPct)} toward TP (${fmtPct(TP)})">
-            <div class="progress-fill" style="width:${pct*100}%;background:var(--green)"></div>
-          </div>`;
-        } else {
-          const pct = Math.min(Math.abs(pnlPct) / SL, 1);
-          progressHtml = `
-          <div class="progress-wrap" title="${fmtPct(pnlPct)} toward SL (${fmtPct(-SL)})">
-            <div class="progress-fill" style="width:${pct*100}%;background:var(--red)"></div>
-          </div>`;
-        }
+      // Polymarket UI URLs look like /event/<event_slug>/<market_slug>.
+      // The event slug is captured at trade time (newer rows) or via the
+      // backfill_event_slug.py script (older rows). Fallback chain:
+      //   event_slug + market_slug → /event/<event_slug>/<market_slug>
+      //   market_slug only         → /event/<market_slug>
+      //   market_id only           → /markets/<conditionId>
+      //   nothing                  → /
+      const evSlug   = p.event_slug  ? encodeURIComponent(String(p.event_slug))  : "";
+      const mktSlug  = p.market_slug ? encodeURIComponent(String(p.market_slug)) : "";
+      const mktIdEnc = p.market_id   ? encodeURIComponent(String(p.market_id))   : "";
+      let marketUrl;
+      if (evSlug && mktSlug) {
+        marketUrl = `https://polymarket.com/event/${evSlug}/${mktSlug}`;
+      } else if (mktSlug) {
+        marketUrl = `https://polymarket.com/event/${mktSlug}`;
+      } else if (mktIdEnc) {
+        marketUrl = `https://polymarket.com/markets/${mktIdEnc}`;
+      } else {
+        marketUrl = "https://polymarket.com/";
       }
-
-      const scoreFillW     = Math.round(Math.abs(score) * 100);
-      const scoreFillColor = scoreColor(score);
-
-      const slug = p.market_slug ? encodeURIComponent(String(p.market_slug)) : "";
-      const encMarketId = p.market_id ? encodeURIComponent(String(p.market_id)) : "";
-      const marketUrl = p.market_slug
-        ? `https://polymarket.com/event/${slug}`
-        : (encMarketId ? `https://polymarket.com/markets/${encMarketId}` : "https://polymarket.com/");
 
       const rawTx = p.tx_hash ? String(p.tx_hash).replace(/[^0-9a-fx]/gi, "") : "";
       const txHtml = rawTx
-        ? `<a class="tx-link" href="https://polygonscan.com/tx/${rawTx}" target="_blank" rel="noopener" title="${escapeHtml(rawTx)}">↗ tx</a>`
+        ? `<a class="tx-link" href="https://polygonscan.com/tx/${rawTx}" target="_blank" rel="noopener" title="${escapeHtml(rawTx)}">↗</a>`
         : "—";
 
       const outcome = (p.outcome || "—").toString();
@@ -636,31 +1087,59 @@ function renderTable(positions) {
       const ocAttr  = /^yes|no$/i.test(outcome) ? outcome.toLowerCase() : "unknown";
       const stAttr  = /^open|closed|pending$/i.test(status) ? status.toLowerCase() : "unknown";
 
-      const q = escapeHtml(p.question || "—");
-      const sig = escapeHtml(p.source_headline || "—");
+      const q   = escapeHtml(p.question || "—");
+      const sig = p.source_headline || "—";
+
+      // ── Signal cell: crowd topic + human-readable strength ─────────────────
+      const str = signalStrength(score);
+      const fillPct = Math.round(Math.abs(score) * 100);
+      const signalCell = `
+        <div class="sig-topic" title="${escapeHtml(sig)}">${escapeHtml(sig)}</div>
+        <div class="sig-meta">
+          <span class="sig-arrow ${str.dirCls}">${str.dirArrow}</span>
+          <span class="sig-strength ${str.cls}">${str.label}</span>
+          <div class="sig-bar" title="|crowd score| × 100 — higher is stronger conviction">
+            <div class="sig-bar-fill" style="width:${fillPct}%;background:${str.color}"></div>
+          </div>
+          <span class="sig-score">${score.toFixed(2)}</span>
+        </div>
+      `;
+
+      // ── Status cell: status badge stacked over close-reason (if closed) ───
+      const reasonHtml = p.status === "closed" ? closeReasonBadge(p.close_reason) : "";
+      const statusCell = `
+        <div class="status-cell">
+          <span class="badge badge-${stAttr}">${escapeHtml(status.toUpperCase())}</span>
+          ${reasonHtml}
+        </div>
+      `;
+
+      // ── Trade cell: entry → mark/close on one mono line ────────────────────
+      const arrow = p.status === "closed" ? "→ close" : "→ mark";
+      const tradeCell = `
+        <span>${fmtPrice(entry)}</span>
+        <span class="arrow" title="${escapeHtml(arrow)}${markTooltip ? ' · '+escapeHtml(markTooltip) : ''}">→</span>
+        <span>${fmtPrice(dispMark)}</span>
+      `;
+
+      // ── P&L cell: dollar amount above, percent below ───────────────────────
+      const pnlClsName = pnlClass(dispPnlUsd ?? 0);
+      const pnlCell = `
+        <div class="pnl-usd ${pnlClsName}">${fmt$(dispPnlUsd)}</div>
+        <div class="pnl-pct">${fmtPct(pnlPct)}</div>
+      `;
 
       return `
       <tr>
         <td class="question-cell" title="${q}">
           <a href="${marketUrl}" target="_blank" rel="noopener">${q}</a>
+          <span class="side-chip ${ocAttr}">${escapeHtml(outcome)}</span>
         </td>
-        <td class="signal-cell" title="${sig}">${sig}</td>
-        <td>
-          <div class="score-bar">
-            <div class="score-pip">
-              <div class="score-fill" style="width:${scoreFillW}%;background:${scoreFillColor}"></div>
-            </div>
-            <span style="font-family:var(--mono);font-size:11px;color:${scoreFillColor}">${score.toFixed(2)}</span>
-          </div>
-        </td>
-        <td><span class="badge badge-${ocAttr}">${escapeHtml(outcome)}</span></td>
-        <td><span class="badge badge-${stAttr}">${escapeHtml(status.toUpperCase())}</span></td>
-        <td class="num">${fmtPrice(entry)}</td>
-        <td class="num" title="${escapeHtml(markTooltip)}">${fmtPrice(dispMark)}</td>
+        <td>${signalCell}</td>
+        <td>${statusCell}</td>
+        <td class="trade-cell">${tradeCell}</td>
         <td class="num">${sizeUsdc !== null ? "$" + sizeUsdc.toFixed(2) : "—"}</td>
-        <td class="num pnl-row ${pnlClass(dispPnlUsd ?? 0)}" title="${escapeHtml(pnlTooltip)}">${fmt$(dispPnlUsd)}</td>
-        <td class="num pnl-row ${pnlClass(pnlPct ?? 0)}">${fmtPct(pnlPct)} ${progressHtml}</td>
-        <td>${closeReasonBadge(p.close_reason)}</td>
+        <td class="num pnl-cell ${pnlClsName}" title="${escapeHtml(pnlTooltip)}">${pnlCell}</td>
         <td>${txHtml}</td>
       </tr>
     `;
@@ -672,19 +1151,44 @@ function renderTable(positions) {
       "The dashboard script hit an error while building the table (often fixed by a hard refresh: Ctrl+Shift+R or ⌘⇧R). " +
       "Details were logged to the browser console (F12)."
     );
-    tbody.innerHTML = `<tr><td colspan="12" class="empty">Could not render rows — see red banner above.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Could not render rows — see red banner above.</td></tr>`;
   }
 }
 
 // ── Filter + Init ─────────────────────────────────────────────────────────────
 
 let activeFilter = "all";
+let topN         = 30;   // default — survives across status-filter clicks
+
+// Sort positions by display P&L (best first) and take the top N. Falls back
+// gracefully when N exceeds the dataset (returns the whole thing sorted).
+function getTopByPnl(positions, n) {
+  return [...positions]
+    .sort((a, b) => (rowPnl(b) ?? 0) - (rowPnl(a) ?? 0))
+    .slice(0, Math.min(n, positions.length));
+}
 
 function applyFilter() {
-  const filtered = activeFilter === "all"
-    ? POSITIONS
-    : POSITIONS.filter(p => p.status === activeFilter);
+  // 1. Top-N is the primary lens — it drives BOTH stats and the table.
+  const top = getTopByPnl(POSITIONS, topN);
+
+  // 2. Stat cards (P&L, Win Rate, ROI) recompute on the top-N slice only.
+  renderStats(top);
+
+  // 3. Status filter narrows further within the top-N.
+  let filtered;
+  if (activeFilter === "all") {
+    filtered = top;
+  } else if (activeFilter === "open") {
+    filtered = top.filter(p => p.status === "open" || p.status === "pending");
+  } else {
+    filtered = top.filter(p => p.status === activeFilter);
+  }
   renderTable(filtered);
+
+  // 4. Footer caption — "Showing top 15 of 38 positions, ranked by P&L"
+  const totalEl = document.getElementById("topn-total");
+  if (totalEl) totalEl.textContent = String(POSITIONS.length);
 }
 
 document.getElementById("filters").addEventListener("click", e => {
@@ -694,6 +1198,14 @@ document.getElementById("filters").addEventListener("click", e => {
   btn.classList.add("active");
   activeFilter = btn.dataset.filter;
   applyFilter();
+});
+
+document.getElementById("topn-select").addEventListener("change", e => {
+  const n = parseInt(e.target.value, 10);
+  if (Number.isFinite(n) && n > 0) {
+    topN = n;
+    applyFilter();
+  }
 });
 
 async function init() {
@@ -716,7 +1228,8 @@ async function init() {
   }
 
   try {
-    renderStats(POSITIONS);
+    // applyFilter() handles both the stat-card render and the table render
+    // (renderStats is computed on the top-N slice inside applyFilter).
     applyFilter();
   } catch (err) {
     console.error(err);

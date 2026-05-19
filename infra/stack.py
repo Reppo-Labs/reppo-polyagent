@@ -93,16 +93,39 @@ class GeoTradingStack(Stack):
             timeout=Duration.seconds(300),
             memory_size=512,
             environment={
-                # Non-sensitive config — safe to version-control
-                "S3_BUCKET":           bucket.bucket_name,
-                "S3_FEEDBACK_KEY":     "geo-signals/feedback.csv",
-                "DDB_TABLE":           "geo-trading-positions",
-                "DDB_REGION":          self.region,
-                "TAKE_PROFIT_PCT":     "0.50",
-                "STOP_LOSS_PCT":       "0.30",
-                "MIN_BALANCE_RESERVE": "15.0",
-                "MAX_ORDER_USD":       "10.0",
-                "DRY_RUN":             "true",
+                # Non-sensitive config — safe to version-control. Production
+                # values match `.lambda-env-opt-d.json` (kept local, gitignored);
+                # post-deploy that file is pushed via update-function-configuration
+                # to restore secrets that CDK does not know about.
+                "S3_BUCKET":            bucket.bucket_name,
+                "S3_FEEDBACK_KEY":      "geo-signals/feedback.csv",
+                "DDB_TABLE":            "geo-trading-positions",
+                "DDB_REGION":           self.region,
+                # Risk rails — tuned 2026-05-15 after 7-day P&L review.
+                "TAKE_PROFIT_PCT":      "0.25",
+                "STOP_LOSS_PCT":        "0.20",
+                "TRAIL_ACTIVATE_PCT":   "0.20",
+                "TRAIL_GIVEBACK_PCT":   "0.30",
+                "LOW_PRICE_THRESHOLD":  "0.15",
+                "LOW_PRICE_SL_TICKS":   "8",
+                # Dollar-loss backstop (Tier 3): closes any position bleeding
+                # past this dollar amount regardless of percent / tick SL.
+                "MAX_ABS_LOSS_USD":     "2.50",
+                "MIN_BALANCE_RESERVE":  "10.0",
+                "MAX_ORDER_USD":        "8.0",
+                "MIN_ENTRY_PRICE":      "0.05",
+                "AGENT_MAX_TOKENS":     "8192",
+                "AGENT_MAX_ITERATIONS": "15",
+                "MAX_PER_THEME":        "5",
+                "GEO_MARKETS_ONLY":     "true",
+                "ENTRY_SCORE_THRESHOLD": "0.70",
+                # Tail gating — cheap entries (< floor) require stronger crowd
+                # evidence (see system_prompt.py Phase 2 step 8).
+                "TAIL_PRICE_FLOOR":           "0.15",
+                "TAIL_SCORE_THRESHOLD":       "0.90",
+                "TAIL_INTERACTIONS_THRESHOLD": "10",
+                "SIGNAL_HALFLIFE_INTERACTIONS": "10",
+                "DRY_RUN":              "true",
             },
         )
 

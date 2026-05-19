@@ -8,7 +8,7 @@ os.environ.setdefault("DDB_TABLE",              "geo-trading-positions")
 os.environ.setdefault("MAX_ORDER_USD",          "10.0")
 os.environ.setdefault("TAKE_PROFIT_PCT",        "0.50")
 os.environ.setdefault("STOP_LOSS_PCT",          "0.30")
-os.environ.setdefault("MIN_BALANCE_RESERVE",    "15.0")
+os.environ.setdefault("MIN_BALANCE_RESERVE",    "10.0")
 os.environ.setdefault("POLYGON_PRIVATE_KEY",    "0xdeadbeef")
 os.environ.setdefault("POLYMARKET_WALLET_ADDRESS", "0xTestWallet")
 
@@ -246,7 +246,7 @@ class TestCheckBalance(unittest.TestCase):
 
     @patch("requests.post")
     def test_ok_to_trade_false_when_balance_below_reserve(self, mock_post):
-        # 5 pUSD — below MIN_BALANCE_RESERVE (15.0)
+        # 5 pUSD — below MIN_BALANCE_RESERVE (10.0)
         mock_post.return_value.json.return_value = {"result": hex(5_000_000)}
         mock_post.return_value.raise_for_status = MagicMock()
 

@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<!-- Source of truth for ABC compare UI. Deploy via scripts/upload_abc_dashboards.sh -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title>Reppo A/B Test — Curated Data as Alpha</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0b0e; --surface: #111114; --surface-2: #16161c;
+      --border: #1e1e25; --border-hi: #2a2a33;
+      --text: #f4f5fa; --text-soft: #aaabb8; --muted: #71727f;
+      --green: #4ade80; --red: #fb7185; --amber: #fbbf24; --blue: #818cf8;
+      --green-bg: rgba(74,222,128,0.10); --red-bg: rgba(251,113,133,0.10);
+      --amber-bg: rgba(251,191,36,0.10); --blue-bg: rgba(129,140,248,0.10);
+      --a: #818cf8; --b: #fbbf24;
+      --mono: ui-monospace, "SF Mono", monospace;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+      font-size: 13.5px; line-height: 1.55;
+    }
+    header {
+      padding: 22px 28px; border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.005em; }
+    header h1 span { color: var(--muted); font-weight: 400; }
+    header p { color: var(--text-soft); margin-top: 8px; max-width: 900px; font-size: 13px; line-height: 1.55; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 0 28px 48px; }
+    @media (max-width: 900px) {
+      .compare-grid, .charts-grid { grid-template-columns: 1fr; }
+    }
+    #global-status { padding: 12px 0; font-size: 12px; color: var(--muted); }
+    .charts-section { margin: 20px 0 28px; }
+    .charts-section h2 {
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); margin-bottom: 14px;
+    }
+    .charts-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px 10px;
+    }
+    .chart-card.wide { grid-column: 1 / -1; }
+    .chart-card h3 { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .chart-card .hint { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .chart-wrap { position: relative; height: 220px; }
+    .chart-wrap.tall { height: 280px; }
+    .legend-inline {
+      display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; font-size: 11px;
+    }
+    .legend-inline span::before {
+      content: ""; display: inline-block; width: 10px; height: 10px;
+      border-radius: 2px; margin-right: 6px; vertical-align: middle;
+    }
+    .legend-a::before { background: var(--a); }
+    .legend-b::before { background: var(--b); }
+    .compare-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px;
+    }
+    .agent-col {
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface); overflow: hidden;
+    }
+    .agent-head { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+    .agent-tag {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+      display: inline-block; margin-bottom: 8px;
+    }
+    .tag-a { color: var(--a); border: 1px solid rgba(129,140,248,0.4); background: rgba(129,140,248,0.1); }
+    .tag-b { color: var(--b); border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.1); }
+    .agent-head h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .agent-head p { font-size: 12px; color: var(--text-soft); line-height: 1.45; }
+    .agent-meta { font-size: 11px; color: var(--muted); margin-top: 8px; font-family: var(--mono); }
+    .wallet-link {
+      display: inline-block; margin-top: 10px;
+      font-size: 11px; font-family: var(--mono); color: var(--text-soft);
+      text-decoration: none; padding: 5px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface-2);
+    }
+    .wallet-link:hover { color: var(--blue); border-color: var(--border-hi); }
+    .stats-mini { display: grid; gap: 8px; padding: 12px 16px; }
+    .stat {
+      padding: 10px 12px; border-radius: 8px; background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-value { font-size: 20px; font-weight: 600; margin-top: 4px; font-family: var(--mono); }
+    .stat-sub { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .neu { color: var(--muted); }
+    .agent-foot { padding: 10px 16px 14px; border-top: 1px solid var(--border); font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+    .agent-foot a { color: var(--a); text-decoration: none; }
+    .agent-foot .version { font-family: var(--mono); color: var(--muted); font-size: 10px; }
+
+    /* ── Positions panel: left nav + table ───────────────────────────── */
+    .positions-panel {
+      display: flex; align-items: stretch;
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface); overflow: hidden; min-height: 420px;
+    }
+    .agent-nav {
+      width: 200px; flex-shrink: 0;
+      background: var(--surface-2); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 8px 0;
+    }
+    .agent-nav button {
+      display: block; width: 100%; text-align: left;
+      padding: 12px 14px; border: none; border-left: 3px solid transparent;
+      background: transparent; color: var(--text); cursor: pointer;
+      font: inherit; transition: background 0.12s;
+    }
+    .agent-nav button:hover { background: rgba(255,255,255,0.03); }
+    .agent-nav button.active { background: var(--surface); }
+    .agent-nav button[data-agent="A"].active { border-left-color: var(--a); }
+    .agent-nav button[data-agent="B"].active { border-left-color: var(--b); }
+    .nav-title { font-size: 13px; font-weight: 600; display: block; }
+    .nav-desc { font-size: 10px; color: var(--muted); display: block; margin-top: 2px; line-height: 1.35; }
+    .nav-meta { font-family: var(--mono); font-size: 11px; margin-top: 6px; display: block; }
+    .nav-meta.up { color: var(--green); }
+    .nav-meta.down { color: var(--red); }
+    .nav-err { font-size: 10px; color: var(--red); margin-top: 4px; display: block; }
+    .positions-main { flex: 1; min-width: 0; padding: 16px 18px 12px; }
+    .positions-main .section-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .section-title {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+      color: var(--muted); text-transform: uppercase;
+    }
+    .positions-count {
+      font-family: var(--mono); font-size: 11px; color: var(--text-soft); margin-left: 6px;
+    }
+    .filters { display: flex; gap: 6px; margin-left: auto; }
+    .filter-btn {
+      font-size: 11px; padding: 4px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent; color: var(--text-soft);
+      cursor: pointer;
+    }
+    .filter-btn.active { background: var(--surface-2); color: var(--text); border-color: var(--border-hi); }
+    .agent-desc-bar { font-size: 12px; color: var(--text-soft); margin-bottom: 12px; line-height: 1.45; }
+    .table-wrap {
+      overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--bg); -webkit-overflow-scrolling: touch;
+    }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    thead tr { background: var(--surface-2); border-bottom: 1px solid var(--border); }
+    th {
+      padding: 10px 12px; font-size: 10px; font-weight: 500; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted); text-align: left;
+    }
+    th.num, td.num { text-align: right; }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface-2); }
+    td { padding: 10px 12px; font-size: 12.5px; vertical-align: middle; }
+    td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .question-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .question-cell a { color: inherit; text-decoration: none; }
+    .question-cell a:hover { color: var(--blue); text-decoration: underline; }
+    .side-chip {
+      font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 5px;
+      border-radius: 3px; margin-left: 6px; letter-spacing: 0.05em;
+    }
+    .side-chip.yes { background: var(--green-bg); color: var(--green); }
+    .side-chip.no  { background: var(--red-bg); color: var(--red); }
+    .sig-topic { color: var(--text-soft); font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    .sig-meta { margin-top: 3px; display: flex; align-items: center; gap: 6px; font-size: 10px; font-family: var(--mono); }
+    .sig-strength { font-weight: 600; font-size: 9px; text-transform: uppercase; }
+    .sig-strength.strong { color: var(--green); }
+    .sig-strength.medium { color: var(--amber); }
+    .sig-strength.weak { color: var(--muted); }
+    .sig-arrow.up { color: var(--green); }
+    .sig-arrow.down { color: var(--red); }
+    .sig-bar { flex: 0 0 32px; height: 3px; background: var(--border-hi); border-radius: 2px; overflow: hidden; }
+    .sig-bar-fill { height: 100%; }
+    .sig-score { color: var(--muted); }
+    .badge {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      padding: 2px 6px; border-radius: 4px; display: inline-block;
+    }
+    .badge-open { background: var(--blue-bg); color: var(--blue); }
+    .badge-pending { background: var(--amber-bg); color: var(--amber); }
+    .badge-closed { background: rgba(113,114,127,0.12); color: var(--text-soft); }
+    .badge-tp, .badge-trail { background: var(--green-bg); color: var(--green); }
+    .badge-sl { background: var(--red-bg); color: var(--red); }
+    .badge-res { background: var(--blue-bg); color: var(--blue); }
+    .badge-exp { background: rgba(113,114,127,0.12); color: var(--text-soft); }
+    .status-cell { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+    .trade-cell { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+    .trade-cell .arrow { color: var(--muted); margin: 0 3px; }
+    .pnl-cell { font-family: var(--mono); line-height: 1.25; }
+    .pnl-cell .pnl-usd { font-size: 12px; font-weight: 600; }
+    .pnl-cell .pnl-pct { font-size: 10px; color: var(--text-soft); margin-top: 1px; }
+    .pnl-cell.up .pnl-pct { color: rgba(74,222,128,0.75); }
+    .pnl-cell.down .pnl-pct { color: rgba(251,113,133,0.75); }
+    .tx-link { font-family: var(--mono); font-size: 11px; color: var(--text-soft); text-decoration: none; }
+    .tx-link:hover { color: var(--blue); }
+    td.empty { text-align: center; color: var(--muted); padding: 28px; white-space: normal; }
+    .table-footer {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 8px; margin-top: 10px; padding: 0 4px;
+      font-size: 11px; color: var(--text-soft); font-family: var(--mono);
+    }
+    .table-footer label { display: inline-flex; align-items: center; gap: 6px; }
+    .table-footer select {
+      appearance: none; background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 3px 22px 3px 8px; font-family: var(--mono); font-size: 11px; cursor: pointer;
+    }
+    .table-footer .muted { color: var(--muted); }
+    @media (max-width: 900px) {
+      .positions-panel { flex-direction: column; }
+      .agent-nav {
+        width: 100%; flex-direction: row; overflow-x: auto; border-right: none;
+        border-bottom: 1px solid var(--border); padding: 0;
+      }
+      .agent-nav button { border-left: none; border-bottom: 3px solid transparent; min-width: 140px; }
+      .agent-nav button.active { border-bottom-color: currentColor; }
+    }
+    .err {
+      margin: 12px 16px; padding: 10px 12px; border-radius: 8px;
+      background: rgba(251,113,133,0.08); border: 1px solid #7f1d1d;
+      color: var(--red); font-size: 12px;
+    }
+    .loading { padding: 24px 16px; color: var(--muted); font-size: 12px; }
+
+
+    /* ── Low-sample warning on stat cards ────────────────────────────── */
+    .stat.low-n { opacity: 0.55; position: relative; }
+    .stat.low-n::after {
+      content: "n<" attr(data-min); position: absolute; top: 6px; right: 8px;
+      font-size: 9px; color: var(--muted); font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .version-changed { color: var(--red); }
+    .live-badge {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      color: var(--green); letter-spacing: 0.04em; vertical-align: middle;
+    }
+
+    .chart-card.edge { border-color: rgba(129,140,248,0.35); }
+
+    .edge-banner {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+      margin: 0 0 8px; padding: 14px 16px;
+      border: 1px solid rgba(129,140,248,0.35); border-radius: 12px;
+      background: rgba(129,140,248,0.06);
+    }
+    @media (max-width: 900px) { .edge-banner { grid-template-columns: 1fr; } }
+    .edge-stat {
+      padding: 10px 12px; border-radius: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+    }
+    .edge-stat-label {
+      font-size: 10px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 6px;
+    }
+    .edge-stat-value {
+      font-family: var(--mono); font-size: 22px; font-weight: 600; line-height: 1.2;
+    }
+    .edge-stat-sub { font-size: 11px; color: var(--text-soft); margin-top: 4px; line-height: 1.4; }
+
+    .section-heading {
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); margin: 28px 0 14px;
+    }
+    .section-heading.first { margin-top: 16px; }
+
+    .intro {
+      margin: 20px 0 0; padding: 20px 22px;
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface);
+    }
+    .intro-eyebrow {
+      font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+    .intro-eyebrow b { color: var(--a); font-weight: 600; }
+    .intro-lede {
+      max-width: 900px; font-size: 13px; line-height: 1.6;
+      color: var(--text-soft); margin-bottom: 16px;
+    }
+    .intro-lede strong { color: var(--text); font-weight: 600; }
+    .intro-lede code {
+      font-family: var(--mono); font-size: 11px;
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 1px 5px; border-radius: 3px; color: var(--text);
+    }
+    .intro-pipeline {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      background: var(--border); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+    @media (max-width: 900px) { .intro-pipeline { grid-template-columns: 1fr; } }
+    .intro-step {
+      background: var(--surface-2); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .intro-step-head { display: flex; align-items: center; gap: 8px; }
+    .intro-step-num {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      color: var(--a); background: rgba(129,140,248,0.12);
+      border: 1px solid rgba(129,140,248,0.30);
+      padding: 1px 6px; border-radius: 4px;
+    }
+    .intro-step-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text);
+    }
+    .intro-step-body {
+      font-size: 12px; line-height: 1.55; color: var(--text-soft);
+    }
+    .intro-step-body code {
+      font-family: var(--mono); font-size: 11px;
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 1px 5px; border-radius: 3px; color: var(--text);
+    }
+    .intro-tagline {
+      margin-top: 14px; font-size: 12.5px; color: var(--muted);
+      font-style: italic; max-width: 720px;
+    }
+    .intro-foot {
+      margin-top: 10px; font-size: 11px; color: var(--muted); line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Reppo A/B Testing <span>/ Human-curated data as tradeable alpha</span></h1>
+  <p>Does Reppo crowd data beat LLM-only pricing on the same markets and risk rules?</p>
+</header>
+
+<div class="wrap">
+
+  <div id="global-status"></div>
+
+  <section class="intro" aria-label="About this A/B test">
+    <div class="intro-eyebrow"><b>Reppo Datanet</b> · Geopolitics</div>
+    <p class="intro-lede">
+      <strong>Reppo Datanet</strong> is curated, stake-weighted human conviction on geopolitical
+      events — voters lock tokens; rewards flow to calls that held up. Votes distill into a
+      structured feed (<code>weighted_score</code>, conviction, interactions) the agent can trade on.
+      <strong>Human feedback → tradeable signal.</strong>
+      <strong>Agent A</strong> trades that feed; <strong>Agent B</strong> is LLM-only on public
+      prices. Same stack, same risk rails, ~$80 bankroll each.
+    </p>
+    <div class="intro-pipeline" role="list">
+      <div class="intro-step" role="listitem">
+        <div class="intro-step-head">
+          <span class="intro-step-num">01</span>
+          <span class="intro-step-label">Stake-backed votes</span>
+        </div>
+        <div class="intro-step-body">
+          Voters lock stake each epoch. Wrong calls cost money; accurate calls earn rewards.
+        </div>
+      </div>
+      <div class="intro-step" role="listitem">
+        <div class="intro-step-head">
+          <span class="intro-step-num">02</span>
+          <span class="intro-step-label">Structured feed</span>
+        </div>
+        <div class="intro-step-body">
+          Rows carry <code>weighted_score</code>, conviction, and depth — machine-readable,
+          not social noise.
+        </div>
+      </div>
+      <div class="intro-step" role="listitem">
+        <div class="intro-step-head">
+          <span class="intro-step-num">03</span>
+          <span class="intro-step-label">Agent A execution</span>
+        </div>
+        <div class="intro-step-body">
+          Each ~15 min run: match crowd rows to Polymarket geo markets, rank by
+          |score| × conviction, enter when crowd direction disagrees with price
+          (score, depth, and theme gates).
+        </div>
+      </div>
+    </div>
+    <p class="intro-tagline">RLHF taught models to talk. Reppo teaches agents to act.</p>
+    <p class="intro-foot">Win rate = wins ÷ (wins + losses) on filled closes. Edge chart = A minus B ROI.</p>
+  </section>
+
+  <h2 class="section-heading first">Latest snapshot</h2>
+  <section class="snapshot-section">
+    <div class="compare-grid" id="compare-grid"></div>
+  </section>
+
+  <section class="edge-banner" id="edge-banner" hidden aria-label="How often Agent A beats Agent B">
+    <div class="edge-stat">
+      <div class="edge-stat-label">Time with A ahead of B</div>
+      <div class="edge-stat-value" id="edge-duration-pct">—</div>
+      <div class="edge-stat-sub" id="edge-duration-sub">Share of this test when Agent A’s return beat Agent B’s</div>
+    </div>
+    <div class="edge-stat">
+      <div class="edge-stat-label">A’s lead right now</div>
+      <div class="edge-stat-value" id="edge-current-pp">—</div>
+      <div class="edge-stat-sub" id="edge-current-sub">How far ahead Agent A is vs B today</div>
+    </div>
+  </section>
+
+  <section class="charts-section" id="charts-section" hidden>
+    <h2 class="section-heading">Performance over time</h2>
+    <div class="legend-inline">
+      <span class="legend-a">Agent A — Reppo data + Strategy 1</span>
+      <span class="legend-b">Agent B — no data + Strategy 1</span>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card wide edge">
+        <h3>Agent A edge on B — ROI difference (pp)</h3>
+        <p class="hint">Positive = Reppo data (A) ahead. Same ranking as portfolio, in percentage points.</p>
+        <div class="chart-wrap tall"><canvas id="chart-spread"></canvas></div>
+      </div>
+      <div class="chart-card wide">
+        <h3>Portfolio value ($)</h3>
+        <p class="hint">~$80 start + total P&amp;L. One point per Lambda run (~15 min).</p>
+        <div class="chart-wrap tall"><canvas id="chart-portfolio"></canvas></div>
+      </div>
+      <div class="chart-card wide">
+        <h3>Win rate (%)</h3>
+        <p class="hint">Wins ÷ (wins + losses) on decisive closes — excludes flat $0 reconciliations (same as snapshot card).</p>
+        <div class="chart-wrap"><canvas id="chart-winrate"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="positions-section">
+    <h2 class="section-heading">Positions by agent</h2>
+    <div class="positions-panel">
+      <nav class="agent-nav" id="agent-nav" aria-label="Select agent"></nav>
+      <div class="positions-main">
+        <p class="agent-desc-bar" id="agent-desc-bar"></p>
+        <div class="section-header">
+          <span class="section-title">Positions <span id="positions-count" class="positions-count"></span></span>
+          <div class="filters" id="filters">
+            <button type="button" class="filter-btn active" data-filter="all">All</button>
+            <button type="button" class="filter-btn" data-filter="open">Open</button>
+            <button type="button" class="filter-btn" data-filter="closed">Closed</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table aria-label="Agent positions">
+            <thead>
+              <tr>
+                <th>Market</th>
+                <th>Signal</th>
+                <th>Status</th>
+                <th class="num">Entry → Mark</th>
+                <th class="num">Size</th>
+                <th class="num">P&amp;L</th>
+                <th>Tx</th>
+              </tr>
+            </thead>
+            <tbody id="positions-body"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <label>
+            <span>Showing top</span>
+            <select id="topn-select" aria-label="Number of top positions to display">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="30" selected>30</option>
+              <option value="40">40</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <span class="muted">of <span id="topn-total">—</span> positions, ranked by P&amp;L</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const AGENTS = [
+  {
+    id: "A", tag: "Agent A", color: "#818cf8",
+    title: "Reppo data + Strategy 1",
+    desc: "Reppo feedback.csv + threshold Phase 2 (baseline).",
+    param: "a",
+    portfolio: "0x4aA88C56208864fd53035B16B7EeE6E887d5c63F",
+  },
+  {
+    id: "B", tag: "Agent B", color: "#fbbf24",
+    title: "No data + Strategy 1",
+    desc: "LLM-only entries (disagreement gate).",
+    param: "b",
+    portfolio: "0xb14Cf74847ffA6bC9EbE4030cb73C40eEc699112",
+  },
+];
+
+// Set by scripts/upload_abc_dashboards.sh (null = use ?a= & ?b= query params).
+// Each agent Lambda writes dashboard/positions.json and dashboard/performance-history.json
+// on its own S3 bucket; time-series charts load history from the same base URL.
+const INJECTED_POSITIONS_URLS = null;
+
+// Default if performance-history.json doesn't carry a starting_bankroll yet
+// (first run after deploy). Per-variant value gets overwritten from history.
+const DEFAULT_BANKROLL = 80;
+
+// Below this number of *closed* trades the variant's headline stats are not
+// statistically meaningful — we render them greyed-out with an "n<MIN_N" badge
+// so viewers don't draw conclusions from a handful of trades.
+const MIN_N_CLOSED = 30;
+
+let charts = {};
+let loadResults = [];      // last fetch per agent
+let activeAgentId = "A";
+let activeFilter = "all";
+let topN = 30;
+
+
+function num(x) {
+  if (x == null || x === "") return null;
+  const v = typeof x === "number" ? x : Number(x);
+  return Number.isFinite(v) ? v : null;
+}
+function fmt$(n) {
+  const v = num(n);
+  if (v === null) return "—";
+  return (v >= 0 ? "+" : "") + v.toFixed(2);
+}
+function pnlClass(n) { return n > 0 ? "up" : n < 0 ? "down" : "neu"; }
+
+function fmtPct(n) {
+  const v = num(n);
+  if (v === null) return "—";
+  return (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+}
+function fmtPrice(n) {
+  const v = num(n);
+  return v !== null ? v.toFixed(3) : "—";
+}
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function signalStrength(score) {
+  const v = num(score);
+  if (v === null) return { label: "—", cls: "weak", color: "var(--muted)", dirCls: "", dirArrow: "" };
+  const abs = Math.abs(v);
+  let label, cls, color;
+  if (abs >= 0.85)      { label = "Strong"; cls = "strong"; color = "var(--green)"; }
+  else if (abs >= 0.65) { label = "Medium"; cls = "medium"; color = "var(--amber)"; }
+  else                  { label = "Weak";   cls = "weak";   color = "var(--muted)"; }
+  const dirCls   = v >= 0 ? "up" : "down";
+  const dirArrow = v >= 0 ? "↑" : "↓";
+  return { label, cls, color, dirCls, dirArrow };
+}
+function closeReasonBadge(r) {
+  if (!r) return "";
+  const map = {
+    take_profit:          ["tp",    "TP"],
+    trailing_take_profit: ["trail", "TRAIL"],
+    stop_loss:            ["sl",    "SL"],
+    expired:              ["exp",   "EXP"],
+    resolution:           ["res",   "SETTLE"],
+  };
+  const [cls, label] = map[r] || ["exp", String(r).toUpperCase()];
+  return `<span class="badge badge-${cls}">${escapeHtml(label)}</span>`;
+}
+
+
+function rowPnl(p) {
+  if (p.status === "open" || p.status === "pending") {
+    const mid = num(p.pnl_usd_mid);
+    if (mid !== null) return mid;
+  }
+  return num(p.pnl_usd);
+}
+
+
+function buildStats(positions, bankroll) {
+  const all = positions || [];
+  const open = all.filter(p => p.status === "open" || p.status === "pending");
+  const closed = all.filter(p => p.status === "closed");
+  const realised = closed.reduce((s, p) => s + (num(p.pnl_usd) ?? 0), 0);
+  const unrealised = open.reduce((s, p) => s + (rowPnl(p) ?? 0), 0);
+  const totalPnl = realised + unrealised;
+  const deployed = all.reduce(
+    (s, p) => s + (num(p.entry_price) ?? 0) * (num(p.size_shares) ?? 0), 0
+  );
+  // ROI = cash-on-cash on the fixed starting bankroll. Sum-of-entry-notional
+  // (previous denominator) inflates with turnover and silently penalises any
+  // strategy that recycles capital — see ABC_TEST/README.md "Wallet model".
+  const bk = bankroll && bankroll > 0 ? bankroll : DEFAULT_BANKROLL;
+  const roi = totalPnl / bk;
+
+  const flatClosed = closed.filter(p => (num(p.pnl_usd) ?? 0) === 0).length;
+  const decisive = closed.filter(p => {
+    const v = num(p.pnl_usd) ?? 0;
+    return v > 0 || v < 0;
+  });
+  const decWins = decisive.filter(p => (num(p.pnl_usd) ?? 0) > 0).length;
+  const decLosses = decisive.filter(p => (num(p.pnl_usd) ?? 0) < 0).length;
+  // Win rate = wins ÷ (wins + losses); excludes flat $0 reconciliations.
+  const winRate = (decWins + decLosses) > 0 ? decWins / (decWins + decLosses) : null;
+  const winPnls = decisive.map(p => num(p.pnl_usd) ?? 0).filter(v => v > 0);
+  const lossPnls = decisive.map(p => num(p.pnl_usd) ?? 0).filter(v => v < 0);
+  const avgWin = winPnls.length ? winPnls.reduce((a, b) => a + b, 0) / winPnls.length : null;
+  const avgLoss = lossPnls.length ? lossPnls.reduce((a, b) => a + b, 0) / lossPnls.length : null;
+  const payoff = avgLoss && avgLoss < 0 ? (avgWin ?? 0) / Math.abs(avgLoss) : null;
+
+  const portfolioUsd = bk + totalPnl;
+  return {
+    totalPnl, realised, unrealised, roi, winRate, portfolioUsd,
+    decWins, decLosses, decisive: decisive.length, flatClosed,
+    avgWin, avgLoss, payoff,
+    closed: closed.length, open: open.length,
+    deployed, all: all.length,
+    bankroll: bk,
+  };
+}
+
+function buildRoiSpreadSeries(results) {
+  const byId = {};
+  for (const r of results) {
+    if (r.err || !r.series) continue;
+    byId[r.agent.id] = r.series
+      .filter(p => p.x && p.roi != null)
+      .map(p => ({ t: Date.parse(p.x), x: p.x, roi: p.roi }))
+      .filter(p => !Number.isNaN(p.t))
+      .sort((a, b) => a.t - b.t);
+  }
+  const aPts = byId.A || [];
+  const bPts = byId.B || [];
+  if (!aPts.length || !bPts.length) return [];
+
+  const events = [
+    ...aPts.map(p => ({ t: p.t, x: p.x, id: "A", roi: p.roi })),
+    ...bPts.map(p => ({ t: p.t, x: p.x, id: "B", roi: p.roi })),
+  ].sort((a, b) => a.t - b.t);
+
+  let lastA = null;
+  let lastB = null;
+  const out = [];
+  for (const ev of events) {
+    if (ev.id === "A") lastA = ev.roi;
+    else lastB = ev.roi;
+    if (lastA == null || lastB == null) continue;
+    const y = (lastA - lastB) * 100;
+    const prev = out[out.length - 1];
+    if (prev && prev.y === y) prev.x = ev.x;
+    else out.push({ x: ev.x, y });
+  }
+  return out;
+}
+
+/** How often A ROI > B ROI on the merged chart timeline. */
+function computeEdgeDominance(spreadPts) {
+  if (!spreadPts || spreadPts.length < 2) return null;
+  let snapAhead = 0, snapBehind = 0, snapTied = 0;
+  let durAhead = 0, durBehind = 0, durTied = 0;
+  for (let i = 0; i < spreadPts.length; i++) {
+    const y = spreadPts[i].y;
+    if (y > 0) snapAhead++;
+    else if (y < 0) snapBehind++;
+    else snapTied++;
+    if (i < spreadPts.length - 1) {
+      const t0 = Date.parse(spreadPts[i].x);
+      const t1 = Date.parse(spreadPts[i + 1].x);
+      const dt = Math.max(0, t1 - t0);
+      if (y > 0) durAhead += dt;
+      else if (y < 0) durBehind += dt;
+      else durTied += dt;
+    }
+  }
+  const snapTotal = spreadPts.length;
+  const durTotal = durAhead + durBehind + durTied;
+  const spreads = spreadPts.map(p => p.y);
+  return {
+    snapshotPct: snapTotal ? (snapAhead / snapTotal) * 100 : null,
+    durationPct: durTotal ? (durAhead / durTotal) * 100 : null,
+    snapshotsAhead: snapAhead,
+    snapshotsBehind: snapBehind,
+    snapshotsTied: snapTied,
+    snapshotsTotal: snapTotal,
+    durationHours: durTotal / 3600000,
+    currentEdgePp: spreadPts[spreadPts.length - 1].y,
+    meanEdgePp: spreads.reduce((a, b) => a + b, 0) / spreads.length,
+  };
+}
+
+function renderEdgeBanner(spreadPts) {
+  const el = document.getElementById("edge-banner");
+  if (!el) return;
+  const d = computeEdgeDominance(spreadPts);
+  if (!d) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  const pctCls = (p) => p >= 50 ? "up" : "down";
+  const fmtPct = (p) => Math.round(p) + "%";
+  const fmtPp = (p) => (p >= 0 ? "+" : "") + p.toFixed(2) + " pp";
+
+  const durEl = document.getElementById("edge-duration-pct");
+  durEl.textContent = fmtPct(d.durationPct);
+  durEl.className = "edge-stat-value " + pctCls(d.durationPct);
+  document.getElementById("edge-duration-sub").textContent =
+    `${d.durationHours.toFixed(1)} hours tracked in this test`;
+
+  const curEl = document.getElementById("edge-current-pp");
+  curEl.textContent = fmtPp(d.currentEdgePp);
+  curEl.className = "edge-stat-value " + (d.currentEdgePp >= 0 ? "up" : "down");
+  const curSub = document.getElementById("edge-current-sub");
+  if (curSub) {
+    curSub.textContent = d.currentEdgePp >= 0
+      ? "Agent A’s return is ahead of Agent B"
+      : "Agent B’s return is ahead of Agent A";
+  }
+}
+
+function historyUrl(positionsUrl) {
+  if (!positionsUrl) return "";
+  return positionsUrl.replace(/positions\.json$/i, "performance-history.json");
+}
+
+function metaUrl(positionsUrl) {
+  if (!positionsUrl) return "";
+  return positionsUrl.replace(/positions\.json$/i, "meta.json");
+}
+
+function walletHintHtml(agent, meta) {
+  const addr = meta?.portfolio_address || agent.portfolio || "";
+  if (!addr) return "";
+  const url = `https://polygonscan.com/address/${encodeURIComponent(addr)}`;
+  return `<a class="wallet-link" href="${url}" target="_blank" rel="noopener">Portfolio on Polygonscan ↗</a>`;
+}
+
+function buildCurveFromPositions(positions, bankroll) {
+  const bk = bankroll || DEFAULT_BANKROLL;
+  const closed = (positions || [])
+    .filter(p => p.status === "closed" && p.close_time)
+    .sort((a, b) => new Date(a.close_time) - new Date(b.close_time));
+  const points = [];
+  let cum = 0;
+  let w = 0, l = 0;
+  if (closed.length) {
+    const t0 = closed[0].entry_time || closed[0].close_time;
+    if (t0) points.push({ x: t0, portfolio_usd: bk, roi: 0, win_rate: null });
+  }
+  for (const p of closed) {
+    cum += num(p.pnl_usd) ?? 0;
+    const pnl = num(p.pnl_usd) ?? 0;
+    if (pnl > 0) w++; else if (pnl < 0) l++;
+    const wr = w + l > 0 ? w / (w + l) : 0;
+    points.push({
+      x: p.close_time,
+      portfolio_usd: bk + cum,
+      roi: cum / bk,
+      win_rate: wr,
+    });
+  }
+  const stats = buildStats(positions, bk);
+  const now = new Date().toISOString();
+  points.push({
+    x: now,
+    portfolio_usd: stats.portfolioUsd,
+    roi: stats.roi,
+    win_rate: stats.winRate ?? 0,
+  });
+  return points;
+}
+
+/** Win rate from history point; legacy rows used all-closed — prefer wins÷(wins+losses). */
+function resolvedWinRate(p) {
+  const w = num(p.wins);
+  const l = num(p.losses);
+  if (w != null && l != null && w + l > 0) return w / (w + l);
+  const wr = num(p.win_rate);
+  if (wr != null) return wr;
+  return num(p.decisive_win_rate);
+}
+
+function historyToSeries(history, positions, bankroll, livePortfolio) {
+  const bk = bankroll || DEFAULT_BANKROLL;
+  let pts = [];
+
+  // Live PM data overrides the rightmost chart point so the chart endpoint
+  // matches the snapshot card (which also uses livePortfolio).
+  const livePUsd = livePortfolio?.total ?? null;
+  const liveRoi  = livePUsd != null ? (livePUsd - bk) / bk : null;
+
+  if (history && Array.isArray(history.points) && history.points.length) {
+    pts = history.points.map(p => ({
+      x: p.ts,
+      portfolio_usd: num(p.portfolio_usd) ?? (bk + (num(p.total_pnl) ?? 0)),
+      roi: num(p.roi),
+      win_rate: num(p.win_rate),
+      wins: num(p.wins),
+      losses: num(p.losses),
+    }));
+    const stats = buildStats(positions, bk);
+    pts.push({
+      x: new Date().toISOString(),
+      portfolio_usd: livePUsd ?? stats.portfolioUsd,
+      roi:           liveRoi  ?? stats.roi,
+      win_rate: stats.winRate ?? 0,
+      wins: stats.decWins,
+      losses: stats.decLosses,
+    });
+  } else {
+    pts = buildCurveFromPositions(positions, bk);
+    // Override last point with live data so both chart and card agree.
+    if (livePUsd != null && pts.length > 0) {
+      const last = pts[pts.length - 1];
+      pts[pts.length - 1] = { ...last, portfolio_usd: livePUsd, roi: liveRoi };
+    }
+  }
+  return pts.filter(p => p.x && p.portfolio_usd != null);
+}
+
+/** Win rate line (wins ÷ wins+losses); null → 0% at experiment start. */
+function buildWinRateDataset(series) {
+  if (!series.length) return [];
+  return series.map(p => {
+    const wr = resolvedWinRate(p);
+    return { x: p.x, y: (wr != null ? wr : 0) * 100 };
+  });
+}
+
+function chartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#16161c",
+        borderColor: "#2a2a33",
+        borderWidth: 1,
+        titleColor: "#f4f5fa",
+        bodyColor: "#aaabb8",
+      },
+    },
+    scales: {
+      x: {
+        type: "time",
+        time: { tooltipFormat: "dd MMM HH:mm", displayFormats: { hour: "MMM d", day: "MMM d" } },
+        grid: { color: "rgba(255,255,255,0.04)" },
+        ticks: { color: "#71727f", maxTicksLimit: 8 },
+      },
+    },
+  };
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
+}
+
+function renderCharts(results) {
+  const section = document.getElementById("charts-section");
+  const ok = results.filter(r => !r.err && (r.series.length || r.stats));
+  if (!ok.length) {
+    section.hidden = true;
+    destroyCharts();
+    return;
+  }
+  section.hidden = false;
+  destroyCharts();
+
+  const spreadPts = buildRoiSpreadSeries(results);
+
+  const lineOpts = (yLabel, yFmt) => ({
+    ...chartDefaults(),
+    scales: {
+      ...chartDefaults().scales,
+      y: {
+        grid: { color: "rgba(255,255,255,0.04)" },
+        ticks: { color: "#71727f", callback: yFmt || (v => v) },
+        title: yLabel ? { display: true, text: yLabel, color: "#71727f", font: { size: 10 } } : undefined,
+      },
+    },
+  });
+
+  const spreadOpts = lineOpts("pp", v => (v >= 0 ? "+" : "") + v.toFixed(1) + " pp");
+  if (spreadOpts.scales?.y) {
+    spreadOpts.scales.y.ticks.callback = v => (v >= 0 ? "+" : "") + v + " pp";
+  }
+  charts.spread = new Chart(document.getElementById("chart-spread"), {
+    type: "line",
+    data: {
+      datasets: [{
+        label: "A − B ROI",
+        data: spreadPts,
+        borderColor: "#818cf8",
+        backgroundColor: "rgba(129,140,248,0.15)",
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.25,
+        fill: true,
+      }],
+    },
+    options: {
+      ...spreadOpts,
+      plugins: {
+        ...spreadOpts.plugins,
+        tooltip: {
+          ...spreadOpts.plugins?.tooltip,
+          callbacks: {
+            label(ctx) {
+              const v = ctx.parsed.y;
+              return `A − B: ${v >= 0 ? "+" : ""}${v.toFixed(2)} pp`;
+            },
+          },
+        },
+      },
+    },
+  });
+
+  charts.portfolio = new Chart(document.getElementById("chart-portfolio"), {
+    type: "line",
+    data: {
+      datasets: results.map(({ agent, series, err }) => ({
+        label: agent.tag,
+        data: err ? [] : series.map(p => ({ x: p.x, y: p.portfolio_usd })),
+        borderColor: agent.color,
+        backgroundColor: agent.color + "22",
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.25,
+        fill: false,
+      })),
+    },
+    options: lineOpts("USD", v => "$" + Number(v).toFixed(2)),
+  });
+
+  charts.winrate = new Chart(document.getElementById("chart-winrate"), {
+    type: "line",
+    data: {
+      datasets: results.map(({ agent, series, err }) => ({
+        label: agent.tag,
+        data: err ? [] : buildWinRateDataset(series),
+        borderColor: agent.color,
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.2,
+        spanGaps: false,
+      })),
+    },
+    options: (() => {
+      const o = lineOpts("%", v => v.toFixed(0) + "%");
+      o.scales.y = { ...o.scales.y, min: 0, max: 100 };
+      return o;
+    })(),
+  });
+}
+
+/**
+ * Fetch live portfolio value from Polymarket data API + on-chain pUSD balance.
+ * Returns { positionValue, cash, total, positions } or null on failure.
+ * Used to override DDB-computed portfolio when the two diverge (e.g. positions
+ * marked order_not_found in DDB while still live on Polymarket).
+ */
+async function fetchLivePortfolio(address) {
+  if (!address) return null;
+  try {
+    const [pmResp, rpcResp] = await Promise.all([
+      fetch(`https://data-api.polymarket.com/positions?user=${address.toLowerCase()}`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null).catch(() => null),
+      (async () => {
+        const pusd = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+        const padded = address.slice(2).toLowerCase().padStart(64, "0");
+        const body = JSON.stringify({ jsonrpc: "2.0", method: "eth_call", params: [{ to: pusd, data: "0x70a08231" + padded }, "latest"], id: 1 });
+        for (const rpc of ["https://polygon-bor-rpc.publicnode.com", "https://polygon.llamarpc.com", "https://rpc.polygon.technology"]) {
+          try {
+            const r = await fetch(rpc, { method: "POST", headers: { "Content-Type": "application/json" }, body, cache: "no-store" });
+            const d = await r.json();
+            if (d.result) return parseInt(d.result, 16) / 1_000_000;
+          } catch {}
+        }
+        return null;
+      })(),
+    ]);
+    const positionValue = (pmResp || []).reduce((s, p) => s + (parseFloat(p.currentValue) || 0), 0);
+    const cash = rpcResp ?? 0;
+    return { positionValue, cash, total: positionValue + cash };
+  } catch {
+    return null;
+  }
+}
+
+function statHtml(label, value, cls, sub, lowN) {
+  const lowAttr = lowN ? ` class="stat low-n" data-min="${MIN_N_CLOSED}"` : ` class="stat"`;
+  return `<div${lowAttr}><div class="stat-label">${label}</div><div class="stat-value ${cls}">${value}</div><div class="stat-sub">${sub}</div></div>`;
+}
+
+function renderColumn(agent, stats, err, detailUrl, version, baseVersion, meta, livePortfolio) {
+  // Prefer live PM portfolio over DDB-computed when available (DDB can drift if
+  // order_not_found reconciliation closes positions that are still live on PM).
+  const useLive = livePortfolio && livePortfolio.total > 0;
+  const portfolioUsd = useLive ? livePortfolio.total : stats.portfolioUsd;
+  const totalPnl = useLive ? (livePortfolio.total - stats.bankroll) : stats.totalPnl;
+  const roi = portfolioUsd != null ? (portfolioUsd - stats.bankroll) / stats.bankroll : stats.roi;
+
+  const roiStr = roi != null ? (roi >= 0 ? "+" : "") + (roi * 100).toFixed(1) + "%" : "—";
+  const wrStr = stats.winRate != null ? Math.round(stats.winRate * 100) + "%" : "—";
+  const portStr = portfolioUsd != null ? "$" + portfolioUsd.toFixed(2) : "—";
+  const tagCls = "tag-" + agent.id.toLowerCase();
+  const lowN = (stats.decWins + stats.decLosses) < MIN_N_CLOSED;
+  const liveTag = useLive
+    ? `<span class="live-badge" title="Portfolio value from Polymarket live data · Cash $${livePortfolio.cash.toFixed(2)} + positions $${livePortfolio.positionValue.toFixed(2)}">live ●</span>`
+    : "";
+  const versionTag = version
+    ? (baseVersion && baseVersion !== version
+        ? `<span class="version version-changed" title="Changed from ${baseVersion}">${version} ⚠</span>`
+        : `<span class="version">${version}</span>`)
+    : "";
+  return `
+    <article class="agent-col">
+      <div class="agent-head">
+        <span class="agent-tag ${tagCls}">${agent.tag}</span>
+        <h2>${agent.title}</h2>
+        <p>${agent.desc}</p>
+        <div class="agent-meta">${stats.all} pos · bankroll $${stats.bankroll.toFixed(0)}</div>
+        ${walletHintHtml(agent, meta)}
+      </div>
+      ${err ? `<div class="err">${err}</div>` : ""}
+      <div class="stats-mini">
+        ${statHtml("Portfolio " + liveTag, portStr, pnlClass(totalPnl),
+          useLive
+            ? `$${livePortfolio.cash.toFixed(2)} cash + $${livePortfolio.positionValue.toFixed(2)} positions`
+            : `${fmt$(totalPnl)} total P&amp;L`, false)}
+        ${statHtml("ROI", roiStr, roi == null ? "neu" : pnlClass(roi),
+          `${fmt$(totalPnl)} ÷ $${stats.bankroll.toFixed(0)} bankroll`, lowN)}
+        ${statHtml("Win rate", wrStr, stats.winRate == null ? "neu" : (stats.winRate >= 0.5 ? "up" : "down"),
+          `${stats.decWins}W · ${stats.decLosses}L`, lowN)}
+      </div>
+      <div class="agent-foot">
+        ${detailUrl ? `<a href="${detailUrl}" target="_blank" rel="noopener">Full dashboard ↗</a>` : "<span></span>"}
+        ${versionTag}
+      </div>
+    </article>`;
+}
+
+
+function defaultPositionsUrl(agent) {
+  if (agent.id !== "A") return "";
+  try {
+    const u = new URL(location.href);
+    if (u.pathname.includes("/dashboard/")) {
+      return new URL("positions.json", u).href;
+    }
+  } catch { /* ignore */ }
+  return "";
+}
+
+function getUrl(agent) {
+  const params = new URLSearchParams(location.search);
+  const injected = INJECTED_POSITIONS_URLS && INJECTED_POSITIONS_URLS[agent.param];
+  return params.get(agent.param) || injected || defaultPositionsUrl(agent) || "";
+}
+
+function resultFor(id) {
+  return loadResults.find(r => r.agent.id === id);
+}
+
+function renderNav() {
+  const nav = document.getElementById("agent-nav");
+  nav.innerHTML = AGENTS.map(a => {
+    const r = resultFor(a.id);
+    const stats = r?.stats;
+    const err = r?.err;
+    const pnl = stats ? fmt$(stats.totalPnl) : "—";
+    const port = stats?.portfolioUsd != null ? `$${stats.portfolioUsd.toFixed(2)}` : "—";
+    const metaCls = stats ? pnlClass(stats.totalPnl) : "neu";
+    const active = a.id === activeAgentId ? " active" : "";
+    return `<button type="button" data-agent="${a.id}" class="${active.trim()}"${active ? ' aria-current="page"' : ""}>
+      <span class="nav-title">${a.tag}</span>
+      <span class="nav-desc">${a.title}</span>
+      <span class="nav-meta ${metaCls}">${pnl} · ${port}</span>
+      ${err ? `<span class="nav-err">Load failed</span>` : ""}
+    </button>`;
+  }).join("");
+  nav.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => selectAgent(btn.dataset.agent));
+  });
+}
+
+function selectAgent(id) {
+  activeAgentId = id;
+  renderNav();
+  const r = resultFor(id);
+  const agent = AGENTS.find(a => a.id === id);
+  const desc = document.getElementById("agent-desc-bar");
+  const detail = r?.url ? detailPageUrl(r.url) : "";
+  const verNote = r?.baseVersion && r?.currentVersion && r.baseVersion !== r.currentVersion
+    ? ` · strategy <span class="version-changed">${escapeHtml(r.currentVersion)}</span> (was ${escapeHtml(r.baseVersion)})`
+    : (r?.currentVersion ? ` · strategy ${escapeHtml(r.currentVersion)}` : "");
+  desc.innerHTML = agent
+    ? `${escapeHtml(agent.desc)}${verNote}${detail ? ` · <a href="${detail}" target="_blank" rel="noopener" style="color:var(--accent)">standalone dashboard ↗</a>` : ""}`
+    : "";
+  if (r?.err) {
+    document.getElementById("positions-body").innerHTML =
+      `<tr><td colspan="7" class="empty">Could not load positions.json. Re-run scripts/upload_abc_dashboards.sh or open the compare URL it prints.</td></tr>`;
+    document.getElementById("positions-count").textContent = "";
+    document.getElementById("topn-total").textContent = "0";
+    return;
+  }
+  applyTableFilter();
+}
+
+function getTopByPnl(positions, n) {
+  return [...positions]
+    .sort((a, b) => (rowPnl(b) ?? 0) - (rowPnl(a) ?? 0))
+    .slice(0, Math.min(n, positions.length));
+}
+
+function renderTable(positions) {
+  const tbody = document.getElementById("positions-body");
+  if (!positions.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">No positions in this view.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = positions.map(p => {
+    const entry    = num(p.entry_price);
+    const size     = num(p.size_shares);
+    const close    = num(p.close_price);
+    const bid      = num(p.current_price);
+    const mid      = num(p.mid_price);
+    const pnlBid   = num(p.pnl_usd);
+    const pnlMid   = num(p.pnl_usd_mid);
+    const score    = num(p.crowd_score) ?? 0;
+    const isOpen   = (p.status === "open" || p.status === "pending");
+    const dispMark = p.status === "closed" ? close : (mid ?? bid);
+    const dispPnlUsd = isOpen ? (pnlMid ?? pnlBid) : pnlBid;
+    const sizeUsdc = (entry !== null && size !== null) ? entry * size : null;
+    let pnlPct = null;
+    if (p.status === "closed" && entry && close !== null) pnlPct = (close - entry) / entry;
+    else if (isOpen && entry && dispMark !== null) pnlPct = (dispMark - entry) / entry;
+    const evSlug   = p.event_slug  ? encodeURIComponent(String(p.event_slug))  : "";
+    const mktSlug  = p.market_slug ? encodeURIComponent(String(p.market_slug)) : "";
+    const mktIdEnc = p.market_id   ? encodeURIComponent(String(p.market_id))   : "";
+    let marketUrl;
+    if (evSlug && mktSlug) marketUrl = `https://polymarket.com/event/${evSlug}/${mktSlug}`;
+    else if (mktSlug) marketUrl = `https://polymarket.com/event/${mktSlug}`;
+    else if (mktIdEnc) marketUrl = `https://polymarket.com/markets/${mktIdEnc}`;
+    else marketUrl = "https://polymarket.com/";
+    const rawTx = p.tx_hash ? String(p.tx_hash).replace(/[^0-9a-fx]/gi, "") : "";
+    const txHtml = rawTx
+      ? `<a class="tx-link" href="https://polygonscan.com/tx/${rawTx}" target="_blank" rel="noopener">↗</a>`
+      : "—";
+    const outcome = (p.outcome || "—").toString();
+    const status  = (p.status  || "—").toString();
+    const ocAttr  = /^yes|no$/i.test(outcome) ? outcome.toLowerCase() : "unknown";
+    const stAttr  = /^open|closed|pending$/i.test(status) ? status.toLowerCase() : "unknown";
+    const q   = escapeHtml(p.question || "—");
+    const sig = p.source_headline || "—";
+    const str = signalStrength(score);
+    const fillPct = Math.round(Math.abs(score) * 100);
+    const signalCell = `
+      <div class="sig-topic" title="${escapeHtml(sig)}">${escapeHtml(sig)}</div>
+      <div class="sig-meta">
+        <span class="sig-arrow ${str.dirCls}">${str.dirArrow}</span>
+        <span class="sig-strength ${str.cls}">${str.label}</span>
+        <div class="sig-bar"><div class="sig-bar-fill" style="width:${fillPct}%;background:${str.color}"></div></div>
+        <span class="sig-score">${score.toFixed(2)}</span>
+      </div>`;
+    const statusCell = `<div class="status-cell">
+      <span class="badge badge-${stAttr}">${escapeHtml(status.toUpperCase())}</span>
+      ${p.status === "closed" ? closeReasonBadge(p.close_reason) : ""}
+    </div>`;
+    const tradeCell = `<span>${fmtPrice(entry)}</span><span class="arrow">→</span><span>${fmtPrice(dispMark)}</span>`;
+    const pnlClsName = pnlClass(dispPnlUsd ?? 0);
+    const pnlCell = `<div class="pnl-usd ${pnlClsName}">${fmt$(dispPnlUsd)}</div><div class="pnl-pct">${fmtPct(pnlPct)}</div>`;
+    return `<tr>
+      <td class="question-cell" title="${q}"><a href="${marketUrl}" target="_blank" rel="noopener">${q}</a>
+        <span class="side-chip ${ocAttr}">${escapeHtml(outcome)}</span></td>
+      <td>${signalCell}</td>
+      <td>${statusCell}</td>
+      <td class="trade-cell">${tradeCell}</td>
+      <td class="num">${sizeUsdc !== null ? "$" + sizeUsdc.toFixed(2) : "—"}</td>
+      <td class="num pnl-cell ${pnlClsName}">${pnlCell}</td>
+      <td>${txHtml}</td>
+    </tr>`;
+  }).join("");
+}
+
+function applyTableFilter() {
+  const r = resultFor(activeAgentId);
+  const all = r?.positions || [];
+  const top = getTopByPnl(all, topN);
+  let filtered;
+  if (activeFilter === "all") filtered = top;
+  else if (activeFilter === "open") filtered = top.filter(p => p.status === "open" || p.status === "pending");
+  else filtered = top.filter(p => p.status === activeFilter);
+  const countEl = document.getElementById("positions-count");
+  if (countEl) countEl.textContent = all.length ? `(${all.length} total)` : "";
+  const totalEl = document.getElementById("topn-total");
+  if (totalEl) totalEl.textContent = String(all.length);
+  renderTable(filtered);
+}
+
+
+function detailPageUrl(dataUrl) {
+  if (!dataUrl) return "";
+  try {
+    const u = new URL(dataUrl);
+    const base = u.pathname.replace(/\/dashboard\/positions\.json$/i, "/dashboard");
+    return u.origin + base + "/index.html";
+  } catch { return ""; }
+}
+
+
+async function fetchJson(url) {
+  if (!url) throw new Error("No URL");
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+async function loadAll() {
+  document.getElementById("compare-grid").innerHTML =
+    AGENTS.map(a => `<article class="agent-col"><div class="loading">Loading ${a.tag}…</div></article>`).join("");
+  const tbody = document.getElementById("positions-body");
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Loading…</td></tr>`;
+  }
+
+  const results = await Promise.all(AGENTS.map(async (agent) => {
+    const url = getUrl(agent);
+    try {
+      const [posData, histData, metaData, livePortfolio] = await Promise.all([
+        fetchJson(url),
+        fetchJson(historyUrl(url)).catch(() => null),
+        fetchJson(metaUrl(url)).catch(() => null),
+        fetchLivePortfolio(agent.portfolio),
+      ]);
+      const positions = Array.isArray(posData) ? posData : (posData.positions || []);
+      // Per-variant starting capital: the Lambda writes this into
+      // performance-history.json so the dashboard can honour different
+      // funding levels. Falls back to DEFAULT_BANKROLL on day 1.
+      const bankroll = num(histData?.starting_bankroll)
+        ?? num(histData?.points?.[0]?.starting_bankroll)
+        ?? DEFAULT_BANKROLL;
+
+      const series = historyToSeries(histData, positions, bankroll, livePortfolio);
+      const stats = buildStats(positions, bankroll);
+
+      // Detect strategy_version drift across the history window — useful for
+      // the "did this variant change mid-experiment?" warning.
+      const versions = (histData?.points || [])
+        .map(p => p.strategy_version)
+        .filter(Boolean);
+      const baseVersion = versions.length ? versions[0] : "";
+      const currentVersion = histData?.strategy_version
+        || (versions.length ? versions[versions.length - 1] : "");
+
+      return {
+        agent, positions, history: histData, series, stats, meta: metaData,
+        bankroll, baseVersion, currentVersion, err: null, url, livePortfolio,
+      };
+    } catch (e) {
+      return {
+        agent, positions: [], history: null, series: [],
+        stats: buildStats([], DEFAULT_BANKROLL), bankroll: DEFAULT_BANKROLL,
+        baseVersion: "", currentVersion: "", err: e.message, url, livePortfolio: null,
+      };
+    }
+  }));
+
+  loadResults = results;
+
+  document.getElementById("compare-grid").innerHTML = results.map(({ agent, stats, err, url, baseVersion, currentVersion, meta, livePortfolio }) => {
+    const msg = err
+      ? `Could not load positions.json. Data URL missing — re-upload compare dashboard.`
+      : null;
+    return renderColumn(agent, stats, msg, detailPageUrl(url), currentVersion, baseVersion, meta, livePortfolio);
+  }).join("");
+
+  const spreadPts = buildRoiSpreadSeries(results);
+  renderCharts(results);
+  renderEdgeBanner(spreadPts);
+  renderNav();
+  selectAgent(activeAgentId);
+
+  const ok = results.filter(r => !r.err).length;
+  const histOk = results.filter(r => r.history && r.history.points && r.history.points.length).length;
+  const lowNCount = results.filter(r => !r.err && (r.stats.decWins + r.stats.decLosses) < MIN_N_CLOSED).length;
+  const lowNote = lowNCount ? ` · ⚠ ${lowNCount}/2 variants have < ${MIN_N_CLOSED} closed trades with P&L` : "";
+  const ra = results.find(r => r.agent.id === "A" && !r.err);
+  const rb = results.find(r => r.agent.id === "B" && !r.err);
+  const roiA = ra ? (ra.livePortfolio?.total != null
+    ? (ra.livePortfolio.total - ra.bankroll) / ra.bankroll
+    : ra.stats.roi) : null;
+  const roiB = rb ? (rb.livePortfolio?.total != null
+    ? (rb.livePortfolio.total - rb.bankroll) / rb.bankroll
+    : rb.stats.roi) : null;
+  const edgeNote = roiA != null && roiB != null
+    ? ` · A−B ROI edge: ${((roiA - roiB) * 100).toFixed(1)} pp`
+    : "";
+  const dom = computeEdgeDominance(spreadPts);
+  const domNote = dom
+    ? ` · A winning ${Math.round(dom.durationPct)}% of test time`
+    : "";
+
+  document.getElementById("global-status").textContent =
+    `Updated ${new Date().toLocaleString()} — ${ok}/2 agents loaded` +
+    (histOk ? ` · ${histOk}/2 have run history` :
+      " · history fills in after deploy + a few Lambda runs") +
+    edgeNote + domNote + lowNote;
+}
+
+
+document.getElementById("filters").addEventListener("click", e => {
+  const btn = e.target.closest(".filter-btn");
+  if (!btn) return;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  activeFilter = btn.dataset.filter;
+  applyTableFilter();
+});
+
+document.getElementById("topn-select").addEventListener("change", e => {
+  const n = parseInt(e.target.value, 10);
+  if (Number.isFinite(n) && n > 0) {
+    topN = n;
+    applyTableFilter();
+  }
+});
+
+loadAll();
+setInterval(loadAll, 60_000);
+</script>
+</body>
+</html>

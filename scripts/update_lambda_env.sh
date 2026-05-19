@@ -51,7 +51,7 @@ read -r -d '' VARS_JSON <<JSON || true
     "SIGNATURE_TYPE":            "${SIGNATURE_TYPE:-POLY_1271}",
     "DRY_RUN":                   "${DRY_RUN:-true}",
     "MAX_ORDER_USD":             "${MAX_ORDER_USD:-10.0}",
-    "MIN_BALANCE_RESERVE":       "${MIN_BALANCE_RESERVE:-15.0}",
+    "MIN_BALANCE_RESERVE":       "${MIN_BALANCE_RESERVE:-10.0}",
     "TAKE_PROFIT_PCT":           "${TAKE_PROFIT_PCT:-0.50}",
     "STOP_LOSS_PCT":             "${STOP_LOSS_PCT:-0.30}",
     "S3_BUCKET":                 "${S3_BUCKET:-}",
