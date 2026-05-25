@@ -40,9 +40,9 @@ class GeoTradingStack(Stack):
             self,
             "GeoSignalsBucket",
             block_public_access=s3.BlockPublicAccess(
-                block_public_acls=False,
+                block_public_acls=True,
                 block_public_policy=False,
-                ignore_public_acls=False,
+                ignore_public_acls=True,
                 restrict_public_buckets=False,
             ),
             cors=[s3.CorsRule(
